@@ -16,12 +16,20 @@ class EmployeeController extends Controller
         $month = $request->month();
         $employees = $report->employees($month, $request->validated())->orderBy('name')->paginate(25)->withQueryString();
         $departments = Employee::distinct()->orderBy('department')->pluck('department');
-        $selectedEmployee = null; $selectedAttendances = collect();
+        $selectedEmployee = null; $selectedAttendances = collect(); $selectedSummary = null;
         if ($request->filled('employee')) {
             $selectedEmployee = Employee::with('shift')->whereKey($request->integer('employee'))->first();
-            if ($selectedEmployee) $selectedAttendances = $report->attendance($month, ['empid'=>$selectedEmployee->empid])->with('employee.shift')->orderBy('date')->get();
+            if ($selectedEmployee) {
+                $attendanceQuery = $report->attendance($month, ['empid'=>$selectedEmployee->empid]);
+                $selectedSummary = $report->summary(clone $attendanceQuery);
+                $selectedAttendances = $attendanceQuery->with('employee.shift')->orderBy('date')->get();
+                $selectedSummary['Total Records'] = $selectedAttendances->count();
+                $selectedSummary['Working Days'] = $selectedAttendances->where('status','!=','Off Day')->count();
+                $selectedSummary['Early Min'] = $selectedAttendances->sum(fn($attendance)=>(int)($attendance->early_minutes ?? 0));
+                $selectedSummary['Late Min'] = $selectedAttendances->sum(fn($attendance)=>(int)($attendance->late_minutes ?? 0));
+            }
         }
-        return view('employees.index', compact('month','employees','departments','selectedEmployee','selectedAttendances'));
+        return view('employees.index', compact('month','employees','departments','selectedEmployee','selectedAttendances','selectedSummary'));
     }
 
     public function create() { return view('employees.form', ['employee'=>new Employee,'shifts'=>Shift::where('is_active',true)->orderBy('name')->get()]); }
