@@ -2,7 +2,7 @@
 @section('title', 'Employee Records')
 @section('subtitle', 'Select an employee to review monthly attendance')
 @section('content')
-<div class="section-toolbar"><p>Employees are shown first. Click any row to load that employee's details and daily records below.</p><div><a class="btn btn-info btn-sm" href="{{ route('shifts.index') }}"><i class="fa fa-clock-o"></i> Shift Management</a> <a class="btn btn-success btn-sm" href="{{ route('employees.create') }}"><i class="fa fa-plus"></i> Add Employee</a></div></div>
+<div class="section-toolbar"><p>Employees are shown first. Click any row to load that employee's details and daily records below.</p><a class="btn btn-success btn-sm" href="{{ route('employees.create') }}"><i class="fa fa-plus"></i> Add Employee</a></div>
 @include('partials.filters')
 @include('partials.employee-table')
 @if($selectedEmployee)
@@ -12,7 +12,7 @@
 <div class="table-header">{{ \Carbon\Carbon::parse($month.'-01')->format('F Y') }} — Daily Attendance</div>
 @php($attendances=$selectedAttendances)
 @include('partials.attendance-table',['showEmployee'=>false])
-<p class="help-block"><strong>Early Min</strong> = minutes the employee left before the assigned shift end time. <strong>Late Min</strong> = minutes the employee arrived after shift start time.</p>
+<p class="help-block"><strong>Early Min</strong> = minutes the employee left before the assigned shift end time. <strong>Late Min</strong> = minutes the employee arrived after shift start time. Attendance rows can be manually corrected using Edit.</p>
 </div>
 @endif
 @endsection
