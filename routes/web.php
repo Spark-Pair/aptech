@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\OperationController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ShiftController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,5 +15,6 @@ Route::middleware('auth')->group(function(){
     Route::resource('employees',EmployeeController::class)->except('destroy');
     Route::get('shifts',[ShiftController::class,'index'])->name('shifts.index'); Route::post('shifts',[ShiftController::class,'store'])->name('shifts.store'); Route::put('shifts/{shift}',[ShiftController::class,'update'])->name('shifts.update');
     Route::get('attendances',[AttendanceController::class,'index'])->name('attendances.index'); Route::put('attendances/{attendance}',[AttendanceController::class,'update'])->name('attendances.update'); Route::post('fetchLogs',[AttendanceController::class,'fetchLogs'])->middleware('throttle:2,1')->name('attendance.sync'); Route::get('fetchLogs',fn()=>redirect()->route('operations.index'));
+    Route::get('reports',[ReportController::class,'index'])->name('reports.index'); Route::get('reports/export/csv',[ReportController::class,'csv'])->name('reports.csv');
     Route::get('operations',[OperationController::class,'index'])->name('operations.index'); Route::post('operations/import',[OperationController::class,'import'])->name('operations.import'); Route::post('operations/generate',[OperationController::class,'generate'])->name('operations.generate'); Route::get('leaves',[OperationController::class,'leaves'])->name('leaves.index'); Route::post('leaves',[OperationController::class,'storeLeave'])->name('leaves.store'); Route::post('logout',[AuthController::class,'logout'])->name('logout');
 });
