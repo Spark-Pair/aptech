@@ -29,7 +29,6 @@ class Attendance extends Model
     {
         $end = $this->shiftBoundary('end_time');
         if (! $end || $this->status !== 'Present' || ! $this->check_out) return null;
-        // Early Min = how many minutes the employee left before their assigned shift ended.
         return max(0, (int) $this->check_out->diffInMinutes($end, false));
     }
 
@@ -38,5 +37,18 @@ class Attendance extends Model
         $start = $this->shiftBoundary('start_time');
         if (! $start || $this->status !== 'Present' || ! $this->check_in) return null;
         return max(0, (int) $start->diffInMinutes($this->check_in, false));
+    }
+
+    public function getWorkingMinutesAttribute(): ?int
+    {
+        if ($this->status !== 'Present' || ! $this->check_in || ! $this->check_out) return null;
+        return max(0, (int) $this->check_in->diffInMinutes($this->check_out, false));
+    }
+
+    public function getWorkingHoursAttribute(): string
+    {
+        $minutes = $this->working_minutes;
+        if ($minutes === null) return '—';
+        return intdiv($minutes, 60).'h '.($minutes % 60).'m';
     }
 }
