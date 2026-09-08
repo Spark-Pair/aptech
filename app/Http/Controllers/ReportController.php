@@ -25,6 +25,11 @@ class ReportController extends Controller
         $to = CarbonImmutable::parse($validated['to'] ?? now()->endOfMonth()->toDateString())->endOfDay();
         $statuses = array_values(array_intersect(self::STATUSES, $validated['statuses'] ?? []));
         $employeeId = $validated['employee'] ?? null;
+        $periodLabel = $from->format('Y-m') === $to->format('Y-m')
+            ? $from->format('F Y')
+            : ($from->format('Y') === $to->format('Y')
+                ? $from->format('F').' – '.$to->format('F Y')
+                : $from->format('F Y').' – '.$to->format('F Y'));
 
         $query = Attendance::query()->with('employee.shift')
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
@@ -54,7 +59,7 @@ class ReportController extends Controller
             ];
         })->values();
 
-        return compact('from','to','statuses','records','selectedEmployee','summary','totals','employeeRows') + [
+        return compact('from','to','periodLabel','statuses','records','selectedEmployee','summary','totals','employeeRows') + [
             'employees'=>Employee::with('shift')->where('is_active',true)->orderBy('name')->get(),
             'availableStatuses'=>self::STATUSES,
         ];
@@ -72,8 +77,9 @@ class ReportController extends Controller
     {
         $data=$this->data($request); $records=$data['records'];
         $rows=[];
-        $rows[]=['Attendance Report'];
-        $rows[]=['Period',$data['from']->format('d M Y').' - '.$data['to']->format('d M Y')];
+        $rows[]=['Attendance Report - '.$data['periodLabel']];
+        $rows[]=['Month / Period',$data['periodLabel']];
+        $rows[]=['Date Range',$data['from']->format('d M Y').' - '.$data['to']->format('d M Y')];
         $rows[]=['Employee',$data['selectedEmployee'] ? $data['selectedEmployee']->name.' ('.$data['selectedEmployee']->empid.')' : 'All Employees'];
         $rows[]=['Statuses',$data['statuses'] ? implode(', ',$data['statuses']) : 'All Statuses'];
         $rows[]=[];
