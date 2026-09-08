@@ -65,7 +65,7 @@ class ReportController extends Controller
     public function csv(Request $request)
     {
         $data=$this->data($request); $records=$data['records']; $filename='attendance-report-'.$data['from']->format('Ymd').'-'.$data['to']->format('Ymd').'.csv';
-        return response()->streamDownload(function() use($records){ $out=fopen('php://output','w'); fputcsv($out,['Date','Employee ID','Employee','Department','Designation','Shift','Status','Check In','Check Out','Late Min','Early Min']); foreach($records as $r) fputcsv($out,[$r->date?->format('Y-m-d'),$r->empid,$r->employee?->name,$r->employee?->department,$r->employee?->designation,$r->employee?->shift?->name,$r->status,$r->check_in?->format('H:i'),$r->check_out?->format('H:i'),$r->late_minutes??0,$r->early_minutes??0]); fclose($out); },$filename,['Content-Type'=>'text/csv; charset=UTF-8']);
+        return response()->streamDownload(function() use($records){ $out=fopen('php://output','w'); fputcsv($out,['S.No','Date','Employee ID','Employee','Department','Designation','Shift','Status','Check In','Check Out','Working Hours','Late Min','Early Min']); foreach($records as $i=>$r) fputcsv($out,[$i+1,$r->date?->format('Y-m-d'),$r->empid,$r->employee?->name,$r->employee?->department,$r->employee?->designation,$r->employee?->shift?->name,$r->status,$r->check_in?->format('H:i'),$r->check_out?->format('H:i'),$r->working_hours,$r->late_minutes??0,$r->early_minutes??0]); fclose($out); },$filename,['Content-Type'=>'text/csv; charset=UTF-8']);
     }
 
     public function excel(Request $request)
@@ -77,8 +77,8 @@ class ReportController extends Controller
         $rows[]=['Employee',$data['selectedEmployee'] ? $data['selectedEmployee']->name.' ('.$data['selectedEmployee']->empid.')' : 'All Employees'];
         $rows[]=['Statuses',$data['statuses'] ? implode(', ',$data['statuses']) : 'All Statuses'];
         $rows[]=[];
-        $rows[]=['Date','Employee ID','Employee','Department','Designation','Shift','Status','Check In','Check Out','Late Min','Early Min'];
-        foreach($records as $r) $rows[]=[ $r->date?->format('Y-m-d'),$r->empid,$r->employee?->name,$r->employee?->department,$r->employee?->designation,$r->employee?->shift?->name,$r->status,$r->check_in?->format('H:i'),$r->check_out?->format('H:i'),$r->late_minutes??0,$r->early_minutes??0 ];
+        $rows[]=['S.No','Date','Employee ID','Employee','Department','Designation','Shift','Status','Check In','Check Out','Working Hours','Late Min','Early Min'];
+        foreach($records as $i=>$r) $rows[]=[$i+1,$r->date?->format('Y-m-d'),$r->empid,$r->employee?->name,$r->employee?->department,$r->employee?->designation,$r->employee?->shift?->name,$r->status,$r->check_in?->format('H:i'),$r->check_out?->format('H:i'),$r->working_hours,$r->late_minutes??0,$r->early_minutes??0];
         $html='<html><head><meta charset="UTF-8"></head><body><table border="1">'; foreach($rows as $row){ $html.='<tr>'; foreach($row as $cell) $html.='<td>'.htmlspecialchars((string)$cell,ENT_QUOTES,'UTF-8').'</td>'; $html.='</tr>'; } $html.='</table></body></html>';
         $filename='attendance-report-'.$data['from']->format('Ymd').'-'.$data['to']->format('Ymd').'.xls';
         return response($html,200,['Content-Type'=>'application/vnd.ms-excel; charset=UTF-8','Content-Disposition'=>'attachment; filename="'.$filename.'"']);
