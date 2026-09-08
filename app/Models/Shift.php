@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Carbon\Carbon;
 
 class Shift extends Model
 {
@@ -20,9 +21,19 @@ class Shift extends Model
 
     public function getDurationMinutesAttribute(): int
     {
-        $start = \Carbon\Carbon::createFromFormat('H:i:s', $this->start_time);
-        $end = \Carbon\Carbon::createFromFormat('H:i:s', $this->end_time);
-        if ($end->lte($start)) $end->addDay();
+        if (! $this->start_time || ! $this->end_time) {
+            return 0;
+        }
+
+        // SQLite/existing data may return H:i, H:i:s, or values with surrounding whitespace.
+        // Carbon::parse safely accepts all of these instead of requiring one exact format.
+        $start = Carbon::parse(trim((string) $this->start_time));
+        $end = Carbon::parse(trim((string) $this->end_time));
+
+        if ($end->lte($start)) {
+            $end->addDay();
+        }
+
         return $start->diffInMinutes($end);
     }
 }
