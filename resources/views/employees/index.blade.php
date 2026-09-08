@@ -10,10 +10,12 @@
 <div class="table-header">Selected Employee Details <span class="pull-right"><a style="color:#fff" href="{{ route('employees.edit',$selectedEmployee) }}"><i class="fa fa-pencil"></i> Edit</a></span></div>
 <div class="table-responsive"><table class="table table-striped table-bordered"><thead><tr><th>Machine Code</th><th>Employee Name</th><th>Department</th><th>Designation</th><th>Shift</th><th>Shift Hours</th></tr></thead><tbody><tr><td>{{ $selectedEmployee->empid }}</td><td>{{ $selectedEmployee->name }}</td><td>{{ $selectedEmployee->department }}</td><td>{{ $selectedEmployee->designation }}</td><td>{{ $selectedEmployee->shift?->name ?? 'Not assigned' }}</td><td>@if($selectedEmployee->shift){{ date('h:i A',strtotime($selectedEmployee->shift->start_time)) }} – {{ date('h:i A',strtotime($selectedEmployee->shift->end_time)) }} ({{ intdiv($selectedEmployee->shift->duration_minutes,60) }}h {{ $selectedEmployee->shift->duration_minutes%60 }}m)@else—@endif</td></tr></tbody></table></div>
 @if($selectedSummary)
+<x-summary :summary="collect($selectedSummary)->only(['Present','Absent','Off Day','Leave'])->all()" />
 <div class="row report-summary">
-@foreach($selectedSummary as $label => $count)
-<div class="col-xs-6 col-sm-4 col-md-3"><div class="infobox">
-<div class="infobox-data"><span class="infobox-data-number">{{ number_format($count) }}</span><div class="infobox-content">{{ $label }}</div></div>
+@foreach(['Working Days'=>'briefcase','Total Records'=>'list-alt','Early Min'=>'sign-out','Late Min'=>'clock-o'] as $label => $icon)
+<div class="col-xs-6 col-md-3"><div class="infobox infobox-blue">
+<div class="infobox-icon"><i aria-hidden="true" class="ace-icon fa fa-{{ $icon }}"></i></div>
+<div class="infobox-data"><span class="infobox-data-number">{{ number_format($selectedSummary[$label] ?? 0) }}</span><div class="infobox-content">{{ $label }}</div></div>
 </div></div>
 @endforeach
 </div>
