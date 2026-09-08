@@ -1,31 +1,13 @@
 @extends('layouts.app')
-@section('title', 'Login | Aptech')
+@section('title', 'Sign In')
 @section('content')
-    <div class="bg-[--secondary-bg-color] p-10 rounded-xl shadow-lg max-w-md w-full fade-in mx-auto">
-        <h1 class="text-3xl font-bold text-center mb-2 text-[--primary-color]">Login</h1>
-
-        <form id="login-form" method="POST" action="{{ route('loginPost') }}" class="space-y-4">
-            @csrf
-            <!-- User Name -->
-            <x-input 
-                label="Username" 
-                name="username" 
-                id="username" 
-                placeholder="Enter your user name" 
-                required 
-            />
-
-            <x-input 
-                label="Password" 
-                name="password" 
-                id="password" 
-                type="password" 
-                placeholder="Enter your password" 
-                required 
-            />
-
-            <!-- login Button -->
-            <button type="submit" class="bg-gray-200 px-5 py-2 rounded-lg hover:bg-gray-300 transition-all duration-300 ease-in-out font-medium">Login</button>
-        </form>
-    </div>
+<div class="position-relative"><div class="login-box visible widget-box no-border"><div class="widget-body"><div class="widget-main">
+<h4 class="header blue lighter bigger"><i aria-hidden="true" class="ace-icon fa fa-coffee green"></i> Please Enter Your Information</h4>
+<div class="space-6"></div>
+<form method="post" action="{{ route('loginPost') }}">@csrf
+<x-field name="username" label="Username" autocomplete="username" maxlength="255" autofocus required />
+<x-field name="password" label="Password" type="password" autocomplete="current-password" required />
+<div class="space"></div><button class="btn btn-primary btn-block" type="submit"><i aria-hidden="true" class="ace-icon fa fa-key"></i> Sign In</button>
+</form>
+</div><div class="toolbar center"><span class="white">Aptech HR &amp; Attendance Portal</span></div></div></div></div>
 @endsection

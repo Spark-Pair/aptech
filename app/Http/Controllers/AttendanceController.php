@@ -2,99 +2,55 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Attendance;
-use App\Models\Employee;
+use App\Http\Requests\ReportRequest;
+use App\Services\AttendanceImporter;
+use App\Services\AttendanceReport;
 use App\Services\ZKTecoService;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class AttendanceController extends Controller
 {
-    public function index() {
-        $attendances = Attendance::with('employee')->get();
-        return view('attendances.index', compact('attendances'));
-    }
-    /**
-     * Fetch attendance logs from the ZKTeco device.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function fetchLogs()
+    public function index(ReportRequest $request, AttendanceReport $report)
     {
-        $zk = new ZKTecoService;
+        $month = $request->month();
+        $query = $report->attendance($month, $request->validated());
+        $summary = $report->summary($query);
+        $attendances = $query->with('employee')->orderByDesc('date')->orderBy('empid')->paginate(50)->withQueryString();
 
-        if ($zk->connect()) {
-            $allAttendance = $zk->getAttendanceLogs();
+        return view('attendances.index', compact('month', 'summary', 'attendances'));
+    }
 
-            foreach ($allAttendance as $data) {
-                if (!empty($data)) {
-                    $empid = $data['id'];
-                    $type = $data['type'] ?? null;
-                    $timestamp = Carbon::parse($data['timestamp']);
-                    $date = $timestamp->toDateString();
-
-                    $employeeExists = Employee::where('empid', $empid)->exists();
-
-                    if ($employeeExists && in_array($type, [0, 1, 4, 5])) {
-                        // 1. Get last attendance date for the employee
-                        $lastAttendance = Attendance::where('empid', $empid)
-                            ->orderByDesc('date')
-                            ->first();
-
-                        if ($lastAttendance && $lastAttendance->date < $date) {
-                            // 2. Fill missing dates with "Absent" or "Off Day"
-                            $missingDate = Carbon::parse($lastAttendance->date)->addDay();
-                            $currentLogDate = Carbon::parse($date);
-
-                            while ($missingDate->lt($currentLogDate)) {
-                                $status = $missingDate->isSunday() ? 'Off Day' : 'Absent';
-
-                                Attendance::updateOrInsert(
-                                    ['empid' => $empid, 'date' => $missingDate->toDateString()],
-                                    ['status' => $status]
-                                );
-
-                                $missingDate->addDay();
-                            }
-                        }
-
-                        // 3. Insert/update current check-in/out
-                        $fields = [];
-
-                        if (in_array($type, [0, 4])) {
-                            $fields['check_in'] = $timestamp;
-                        }
-
-                        if (in_array($type, [1, 5])) {
-                            // check-in must exist first
-                            $existing = Attendance::where('empid', $empid)->where('date', $date)->first();
-                            if (empty($existing?->check_in)) {
-                                continue; // skip this check-out
-                            }
-
-                            $fields['check_out'] = $timestamp;
-                        }
-
-                        if (!empty($fields)) {
-                            Attendance::updateOrInsert(
-                                ['empid' => $empid, 'date' => $date],
-                                array_merge($fields, ['status' => 'Present'])
-                            );
-                        }
-                    }
-                }
-            }
-
-            if (!empty($allAttendance)) {
-                $zk->clearAttendance();
-            }
-
-            $zk->disconnect();
-
-            return redirect()->back()->with('success', 'Attendance logs fetched successfully.');
-        } else {
-            return redirect()->back()->with('error', 'Unable to connect to the ZKTeco device. Please check the device or network connection.');
+    public function fetchLogs(ZKTecoService $device, AttendanceImporter $importer)
+    {
+        $lock = Cache::lock('attendance-device-sync', 180);
+        if (! $lock->get()) {
+            return back()->with('warning', 'A device sync is already running.');
         }
+        $connected = false;
+        try {
+            $connected = $device->connect();
+            if (! $connected) {
+                return back()->with('error', 'Unable to connect to the device. Check its IP and network connection.');
+            }
+            $result = $importer->import($device->getAttendanceLogs());
 
-        return redirect()->back()->with('error', 'Unable to connect to the ZKTeco device.');
+            return back()->with('success', "{$result['days']} attendance days updated; {$result['skipped']} unsupported or unmatched logs skipped. Device logs retained.");
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with('error', 'Device sync failed. Check the device configuration, PHP sockets extension and application log.');
+        } finally {
+            try {
+                if ($connected) {
+                    $device->disconnect();
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            } finally {
+                $lock->release();
+            }
+        }
     }
 }

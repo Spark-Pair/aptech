@@ -2,40 +2,62 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\employee;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use App\Http\Requests\EmployeeRequest;
+use App\Http\Requests\ReportRequest;
+use App\Models\Employee;
+use App\Services\AttendanceReport;
+use Illuminate\Support\Facades\Hash;
 
 class EmployeeController extends Controller
 {
-    public function index() 
+    public function index(ReportRequest $request, AttendanceReport $report)
     {
-        $employees = Employee::with('attendance')->get();
-        // return $employees;
-        return view('employees.index', compact('employees'));
+        $month = $request->month();
+        $employees = $report->employees($month, $request->validated())->orderBy('name')->paginate(25)->withQueryString();
+        $departments = Employee::distinct()->orderBy('department')->pluck('department');
+
+        return view('employees.index', compact('month', 'employees', 'departments'));
     }
-    public function store(Request $request) 
+
+    public function create()
     {
-        $validator = Validator::make($request->all(), [
-            'empid' => 'required|integer',
-            'name' => 'required|string',
-            'email' => 'nullable|email',
-            'username' => 'required|string|unique:employees,username',
-            'password' => 'required|string|min:4',
-            'designation' => 'required|string',
-            'department' => 'required|string',
-            'joining_date' => 'required|date',
-            'salary' => 'required|numeric',
-        ]);
+        return view('employees.form', ['employee' => new Employee]);
+    }
 
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
+    public function edit(Employee $employee)
+    {
+        return view('employees.form', compact('employee'));
+    }
+
+    public function store(EmployeeRequest $request)
+    {
+        $data = $request->validated();
+        $data['password'] = Hash::make($data['password']);
+        $employee = Employee::create($data);
+
+        return redirect()->route('employees.show', $employee)->with('success', 'Employee created.');
+    }
+
+    public function update(EmployeeRequest $request, Employee $employee)
+    {
+        $data = $request->validated();
+        if (! empty($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
         }
+        $employee->update($data);
 
-        $data = $request->all();
+        return redirect()->route('employees.show', $employee)->with('success', 'Employee updated.');
+    }
 
-        employee::create($data);
-        
-        return redirect(route('employees.index'));
+    public function show(ReportRequest $request, Employee $employee, AttendanceReport $report)
+    {
+        $month = $request->month();
+        $query = $report->attendance($month, ['empid' => $employee->empid]);
+        $summary = $report->summary($query);
+        $attendances = $query->orderBy('date')->get();
+
+        return view('employees.show', compact('employee', 'month', 'summary', 'attendances'));
     }
 }

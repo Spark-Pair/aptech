@@ -1,86 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <script src="{{ asset('tailwind.js') }}"></script>
-    <script src="{{ asset('jquery.js') }}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <title>@yield('title', 'Aptech')</title>
-    <style>
-        :root {
-            --bg-color: #fbfbfd;
-            --h-bg-color:#f2f2f2;
-            --secondary-bg-color: #ffffff;
-            --h-secondary-bg-color: hsl(0, 0%, 96%);
-            --text-color: #1f2937;
-            --secondary-text: #4b5563;
-            --bg-warning: hsl(45, 100%, 87%);
-            --bg-success: hsl(130, 100%, 87%);
-            --bg-error: hsl(360, 100%, 87%);
-            --h-bg-warning: hsl(45, 100%, 80%);
-            --h-bg-success: hsl(130, 100%, 80%);
-            --h-bg-error: hsl(360, 100%, 80%);
-            --border-warning: hsl(45, 100%, 45%);
-            --border-success: hsl(130, 100%, 45%);
-            --border-error: hsl(360, 100%, 45%);
-            --text-warning: hsl(45, 75%, 40%);
-            --text-success: hsl(130, 75%, 40%);
-            --text-error: hsl(360, 75%, 40%);
-
-            --danger-color: hsl(0, 65%, 51%);
-            --h-danger-color: hsl(0, 65%, 41%);
-            --success-color: hsl(142, 65%, 36%);
-            --h-success-color: hsl(142, 65%, 26%);
-
-            --overlay-color: rgba(0, 0, 0, 0.3);
-        }
-        
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-    </style>
+    <title>@yield('title', 'Dashboard') | Aptech HR Portal</title>
+    <link rel="stylesheet" href="{{ asset('hr/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('hr/font-awesome/4.5.0/css/font-awesome.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('hr/css/ace.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('hr/css/portal.css') }}">
+    <script src="{{ asset('hr/js/ace-extra.min.js') }}"></script>
 </head>
-
-<body class="bg-[--bg-color] text-[--text-color] text-sm min-h-screen flex flex-col md:flex-row items-center justify-center fade-in" cz-shortcut-listen="true">
-    {{-- side bar --}}
-    @if (Auth::check())
-        <script>
-            const url = window.location.href; // Get the current URL
-        </script>
-
-        <x-sidebar>
-        </x-sidebar>
-    @endif
-
-    <div class="wrapper flex-1 flex flex-col md:h-screen relative w-full">
-        {{-- alert --}}
-        <div id="messageBox" class="absolute top-5 mx-auto flex items-center flex-col space-y-3 z-50 text-sm w-full select-none pointer-events-none">
-            @if (session('success'))
-                <x-alert type="success" :messages="session('success')" />
-            @endif
-        
-            @if (session('warning'))
-                <x-alert type="warning" :messages="session('warning')" />
-            @endif
-        
-            @if (session('error'))
-                <x-alert type="error" :messages="session('error')" />
-            @endif
-        </div>
-        
-        {{-- main content --}}
-        <main class="flex-1 px-8 py-0 md:p-8 overflow-y-auto my-scroller-2 flex items-center justify-center">
-            <div class="main-child grow">
-                @yield('content')
-            </div>
-        </main>
+<body class="{{ auth()->check() ? 'no-skin' : 'login-layout light-login' }}">
+@auth
+<a class="sr-only sr-only-focusable" href="#main-content">Skip to content</a>
+<div id="navbar" class="navbar navbar-default">
+    <div class="navbar-container">
+        <button type="button" class="navbar-toggle menu-toggler pull-left" id="menu-toggler" data-target="#sidebar" aria-label="Toggle navigation"><span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span></button>
+        <div class="navbar-header pull-left"><a href="{{ route('dashboard') }}" class="navbar-brand"><small><i class="fa fa-leaf" aria-hidden="true"></i> Payroll System</small></a></div>
+        <div class="navbar-buttons navbar-header pull-right"><ul class="nav ace-nav"><li class="light-blue">
+            <a data-toggle="dropdown" href="#" class="dropdown-toggle" aria-label="Account menu" aria-haspopup="true"><i class="fa fa-user-circle-o" aria-hidden="true"></i> <span class="user-info"><small>Welcome,</small>{{ auth()->user()->name }}</span><i aria-hidden="true" class="ace-icon fa fa-caret-down"></i></a>
+            <ul class="user-menu dropdown-menu-right dropdown-menu"><li><form method="post" action="{{ route('logout') }}">@csrf<button class="account-logout" type="submit"><i aria-hidden="true" class="fa fa-power-off"></i> Sign out</button></form></li></ul>
+        </li></ul></div>
     </div>
+</div>
+<div class="main-container" id="main-container">
+    @include('partials.sidebar')
+    <div class="main-content"><div class="main-content-inner">
+        <div class="breadcrumbs"><ul class="breadcrumb"><li><i aria-hidden="true" class="ace-icon fa fa-home home-icon"></i><a href="{{ route('dashboard') }}">Home</a></li><li class="active">@yield('title', 'Dashboard')</li></ul><span class="portal-date hidden-xs">{{ now()->format('D, d M Y') }}</span></div>
+        <main class="page-content" id="main-content">
+            <div class="page-header"><h1>@yield('title', 'Dashboard') <small><i aria-hidden="true" class="ace-icon fa fa-angle-double-right"></i> @yield('subtitle', 'Aptech HR Portal')</small></h1></div>
+            @include('partials.messages')
+            @yield('content')
+        </main>
+    </div></div>
+    <div class="footer"><div class="footer-inner"><div class="footer-content"><span class="blue bolder">Aptech</span> HR &amp; Attendance Portal &copy; {{ now()->year }}</div></div></div>
+</div>
+@else
+<main class="main-container"><div class="main-content"><div class="row"><div class="col-sm-10 col-sm-offset-1"><div class="login-container">
+    <div class="center"><h1><i aria-hidden="true" class="ace-icon fa fa-leaf green"></i> <span class="blue">Aptech</span> <span class="grey">HR Portal</span></h1><h4 class="blue">Payroll &amp; Attendance</h4></div>
+    @include('partials.messages')
+    @yield('content')
+</div></div></div></div></main>
+@endauth
+<script src="{{ asset('hr/js/jquery-2.1.4.min.js') }}"></script>
+<script src="{{ asset('hr/js/bootstrap.min.js') }}"></script>
+<script src="{{ asset('hr/js/ace.min.js') }}"></script>
+<script src="{{ asset('hr/js/portal.js') }}"></script>
+@stack('scripts')
 </body>
-
 </html>

@@ -1,0 +1,9 @@
+<div class="table-header">Employee Records <span class="pull-right">{{ number_format($employees->total()) }} records &middot; {{ \Carbon\Carbon::parse($month.'-01')->format('F Y') }}</span></div>
+<div class="table-responsive"><table class="table table-striped table-bordered table-hover">
+<thead><tr><th>Machine Code</th><th>Employee Name</th><th>Department</th><th>Working Days</th><th>Present</th><th>Absent</th><th>Off Days</th><th>Leave</th><th>Early Min</th><th>Late Min</th><th>Details</th></tr></thead>
+<tbody>@forelse($employees as $employee)
+<tr><td>{{ $employee->empid }}</td><td><a href="{{ route('employees.show', ['employee'=>$employee, 'month'=>$month]) }}">{{ $employee->name }}</a>@unless($employee->is_active) <span class="label label-default">Inactive</span>@endunless</td><td>{{ $employee->department }}</td><td>{{ $employee->working_days }}</td><td class="green">{{ $employee->present_days }}</td><td class="red">{{ $employee->absent_days }}</td><td>{{ $employee->off_days }}</td><td>{{ $employee->leave_days }}</td><td>{{ config('attendance.shift_end') ? $employee->attendance->sum('early_minutes') : '—' }}</td><td>{{ config('attendance.shift_start') ? $employee->attendance->sum('late_minutes') : '—' }}</td><td><a href="{{ route('employees.show', ['employee'=>$employee,'month'=>$month]) }}" aria-label="View {{ $employee->name }}">View <i aria-hidden="true" class="fa fa-angle-double-right"></i></a></td></tr>
+@empty<tr><td colspan="11" class="empty-state"><i aria-hidden="true" class="fa fa-users"></i><p>No employees match these filters.</p><a href="{{ route('employees.create') }}">Add an employee</a></td></tr>@endforelse</tbody>
+</table></div>
+@include('partials.pagination', ['records'=>$employees])
+<p class="help-block">Working days = recorded present, absent and leave days. Generate missing attendance from Operations to complete a month.</p>

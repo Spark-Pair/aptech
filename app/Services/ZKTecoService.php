@@ -3,72 +3,35 @@
 namespace App\Services;
 
 use Rats\Zkteco\Lib\ZKTeco;
-use Exception;
+use RuntimeException;
 
 class ZKTecoService
 {
-    protected $zk;
-    protected $isOnline = false;
+    protected ?ZKTeco $zk = null;
 
-    public function __construct()
+    public function connect(): bool
     {
-        $deviceIp = '192.168.100.125';
-        $devicePort = 4370;
-
-        try {
-            if ($this->isDeviceOnline($deviceIp, $devicePort)) {
-                $this->zk = new ZKTeco($deviceIp, $devicePort);
-                $this->isOnline = true;
-            } else {
-                throw new Exception('Device is offline.');
-            }
-        } catch (Exception $e) {
-            // Log error or handle as needed
-            $this->isOnline = false;
-            $this->zk = null;
+        if (! extension_loaded('sockets')) {
+            throw new RuntimeException('Enable the PHP sockets extension to connect to the attendance device.');
         }
+        $this->zk = new ZKTeco(config('attendance.device_ip'), config('attendance.device_port'));
+        socket_set_option($this->zk->_zkclient, SOL_SOCKET, SO_RCVTIMEO, ['sec' => max(1, config('attendance.device_timeout')), 'usec' => 0]);
+
+        return (bool) $this->zk->connect();
     }
 
-    public function connect()
+    public function getAttendanceLogs(): array
     {
-        if (!$this->isOnline || !$this->zk) {
-            return false;
-        }
-
-        return $this->zk->connect();
+        return $this->zk?->getAttendance() ?: [];
     }
 
-    public function isDeviceOnline($ip, $port = 4370, $timeout = 2)
+    public function getUsers(): array
     {
-        $connection = @fsockopen($ip, $port, $errno, $errstr, $timeout);
-
-        if ($connection) {
-            fclose($connection);
-            return true;
-        }
-
-        return false;
+        return $this->zk?->getUser() ?: [];
     }
 
-    public function getAttendanceLogs()
+    public function disconnect(): void
     {
-        return $this->zk?->getAttendance() ?? [];
-    }
-
-    public function clearAttendance()
-    {
-        return $this->zk?->clearAttendance() ?? false;
-    }
-
-    public function getUsers()
-    {
-        return $this->zk?->getUser() ?? [];
-    }
-
-    public function disconnect()
-    {
-        if ($this->zk) {
-            $this->zk->disconnect();
-        }
+        $this->zk?->disconnect();
     }
 }
