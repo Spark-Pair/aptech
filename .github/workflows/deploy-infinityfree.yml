@@ -26,9 +26,7 @@ jobs:
           coverage: none
 
       - name: Install production PHP dependencies
-        run: |
-          composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts
-          composer dump-autoload --no-dev --no-optimize --no-interaction
+        run: composer install --no-dev --no-interaction --prefer-dist --no-progress --no-scripts
 
       - name: Setup Node
         uses: actions/setup-node@v4
