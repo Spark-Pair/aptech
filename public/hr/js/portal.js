@@ -1,6 +1,6 @@
 (function () {
     'use strict';
-    var main = document.getElementById('main-content');
+    var main = null;
     var token = document.querySelector('meta[name="csrf-token"]');
     var isLoading = false;
 
@@ -123,11 +123,33 @@
     document.querySelectorAll('[data-print]').forEach(function (button) {
         button.addEventListener('click', function () { window.print(); });
     });
-    if (main) bindAjax(document);
-    window.addEventListener('popstate', function () { loadPage(window.location.href, false, true); });
+
+    function initPortal() {
+        main = document.getElementById('main-content');
+
+        if (main) {
+            bindAjax(document);
+        }
+    }
+
+    document.querySelectorAll('[data-print]').forEach(function (button) {
+        button.addEventListener('click', function () { window.print(); });
+    });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPortal);
+    } else {
+        initPortal();
+    }
+
+    window.addEventListener('popstate', function () {
+        loadPage(window.location.href, false, true);
+    });
+
     window.addEventListener('pageshow', function () {
         document.querySelectorAll('button[aria-busy="true"]').forEach(function (button) {
-            button.disabled = false; button.removeAttribute('aria-busy');
+            button.disabled = false;
+            button.removeAttribute('aria-busy');
         });
     });
 }());
