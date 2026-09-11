@@ -114,6 +114,8 @@
             });
         });
         scope.querySelectorAll('[data-employee-url]').forEach(function (row) {
+            console.log('hello');
+            
             if (row.dataset.ajaxBound) return;
             row.dataset.ajaxBound = 'true';
             row.addEventListener('click', function () { loadPage(row.dataset.employeeUrl, true); });

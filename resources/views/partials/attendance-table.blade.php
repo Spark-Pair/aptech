@@ -1,12 +1,42 @@
-<div class="table-responsive"><table class="table table-striped table-bordered table-hover">
-<thead><tr><th>Date</th>@if($showEmployee ?? true)<th>Employee</th><th>Machine Code</th>@endif<th>Time In</th><th>Time Out</th><th>Status</th><th>Working Hours</th><th>Early Min</th><th>Late Min</th><th style="width:70px">Edit</th></tr></thead>
-<tbody>@forelse($attendances as $attendance)<tr>
-<td>{{ $attendance->date->format('d M Y, D') }}</td>
-@if($showEmployee ?? true)<td>{{ $attendance->employee?->name ?? 'Unknown employee' }}</td><td>{{ $attendance->empid }}</td>@endif
-<td>{{ $attendance->check_in?->format('h:i A') ?? '-' }}</td><td>{{ $attendance->check_out?->format('h:i A') ?? '-' }}</td><td><x-status :status="$attendance->status" /></td>
-<td>@if($attendance->check_in && $attendance->check_out && $attendance->check_out->gte($attendance->check_in)){{ number_format($attendance->check_in->diffInMinutes($attendance->check_out)/60,2) }} hrs @elseif($attendance->check_in || $attendance->check_out)<span class="orange">Incomplete punches</span>@else &mdash; @endif</td><td>{{ $attendance->early_minutes ?? '—' }}</td><td>{{ $attendance->late_minutes ?? '—' }}</td>
-<td><button type="button" class="btn btn-xs btn-info" onclick="document.getElementById('edit-attendance-{{ $attendance->id }}').style.display=document.getElementById('edit-attendance-{{ $attendance->id }}').style.display==='none'?'table-row':'none'"><i class="fa fa-pencil"></i> Edit</button></td></tr>
-<tr id="edit-attendance-{{ $attendance->id }}" style="display:none"><td colspan="{{ ($showEmployee ?? true) ? 10 : 8 }}"><form method="post" action="{{ route('attendances.update',$attendance) }}" class="form-inline" style="padding:8px">@csrf @method('put')
-<strong style="margin-right:15px">Edit {{ $attendance->date->format('d M Y') }}</strong><label>Time In&nbsp;</label><input class="form-control input-sm" type="time" name="check_in" value="{{ $attendance->check_in?->format('H:i') }}"> <label style="margin-left:10px">Time Out&nbsp;</label><input class="form-control input-sm" type="time" name="check_out" value="{{ $attendance->check_out?->format('H:i') }}"> <label style="margin-left:10px">Status&nbsp;</label><select class="form-control input-sm" name="status">@foreach(['Present','Absent','Off Day','Leave'] as $status)<option value="{{ $status }}" @selected($attendance->status===$status)>{{ $status }}</option>@endforeach</select> <button class="btn btn-success btn-sm" style="margin-left:10px"><i class="fa fa-check"></i> Save</button></form></td></tr>
-@empty<tr><td colspan="{{ ($showEmployee ?? true) ? 10 : 8 }}" class="empty-state"><i class="fa fa-calendar"></i><p>No attendance records for this selection.</p></td></tr>@endforelse</tbody></table></div>
+<div class="table-responsive">
+    <table class="table table-striped table-bordered table-hover">
+        <thead>
+            <tr>
+                <th>Date</th>@if($showEmployee ?? true)<th>Employee</th>
+                <th>Machine Code</th>@endif<th>Time In</th>
+                <th>Time Out</th>
+                <th>Status</th>
+                <th>Working Hours</th>
+                <th>Early Min</th>
+                <th>Late Min</th>
+                <th style="width:70px">Edit</th>
+            </tr>
+        </thead>
+        <tbody>@forelse($attendances as $attendance)<tr>
+                <td>{{ $attendance->date->format('d M Y, D') }}</td>
+                @if($showEmployee ?? true)<td>{{ $attendance->employee?->name ?? 'Unknown employee' }}</td>
+                <td>{{ $attendance->empid }}</td>@endif
+                <td>{{ $attendance->check_in?->format('h:i A') ?? '-' }}</td>
+                <td>{{ $attendance->check_out?->format('h:i A') ?? '-' }}</td>
+                <td><x-status :status="$attendance->status" /></td>
+                <td>@if($attendance->check_in && $attendance->check_out && $attendance->check_out->gte($attendance->check_in)){{ number_format($attendance->check_in->diffInMinutes($attendance->check_out)/60,2) }} hrs @elseif($attendance->check_in || $attendance->check_out)<span class="orange">Incomplete punches</span>@else &mdash; @endif</td>
+                <td>{{ $attendance->early_minutes ?? '—' }}</td>
+                <td>{{ $attendance->late_minutes ?? '—' }}</td>
+                <td><button type="button" class="btn btn-xs btn-info" onclick="document.getElementById('edit-attendance-{{ $attendance->id }}').style.display=document.getElementById('edit-attendance-{{ $attendance->id }}').style.display==='none'?'table-row':'none'"><i class="fa fa-pencil"></i> Edit</button></td>
+            </tr>
+            <tr id="edit-attendance-{{ $attendance->id }}" style="display:none">
+                <td colspan="{{ ($showEmployee ?? true) ? 10 : 8 }}">
+                    <form method="post" action="{{ route('attendances.update',$attendance) }}" class="form-inline" style="padding:8px">@csrf @method('put')
+                        <strong style="margin-right:15px">Edit {{ $attendance->date->format('d M Y') }}</strong><label>Time In&nbsp;</label><input class="form-control input-sm" type="time" name="check_in" value="{{ $attendance->check_in?->format('H:i') }}"> <label style="margin-left:10px">Time Out&nbsp;</label><input class="form-control input-sm" type="time" name="check_out" value="{{ $attendance->check_out?->format('H:i') }}"> <label style="margin-left:10px">Status&nbsp;</label><select class="form-control input-sm" name="status">@foreach(['Present','Absent','Off Day','Leave'] as $status)<option value="{{ $status }}" @selected($attendance->status===$status)>{{ $status }}</option>@endforeach</select> <button class="btn btn-success btn-sm" style="margin-left:10px"><i class="fa fa-check"></i> Save</button>
+                    </form>
+                </td>
+            </tr>
+            @empty<tr>
+                <td colspan="{{ ($showEmployee ?? true) ? 10 : 8 }}" class="empty-state"><i class="fa fa-calendar"></i>
+                    <p>No attendance records for this selection.</p>
+                </td>
+            </tr>@endforelse
+        </tbody>
+    </table>
+</div>
 @if($attendances instanceof \Illuminate\Contracts\Pagination\Paginator)@include('partials.pagination',['records'=>$attendances])@endif
