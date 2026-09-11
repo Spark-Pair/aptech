@@ -34,21 +34,37 @@ class AttendanceController extends Controller
             'check_out' => $data['check_out'] ? $date.' '.$data['check_out'].':00' : null,
             'status' => $data['status'],
         ]);
+        if ($request->wantsJson()) return response()->json(['message' => 'Attendance record updated.', 'refresh' => true]);
         return back()->with('success', 'Attendance record updated.');
     }
 
     public function fetchLogs(ZKTecoService $device, AttendanceImporter $importer)
     {
         $lock = Cache::lock('attendance-device-sync', 180);
-        if (! $lock->get()) return back()->with('warning', 'A device sync is already running.');
+        if (! $lock->get()) {
+            $message = 'A device sync is already running.';
+            if (request()->wantsJson()) return response()->json(['message' => $message, 'level' => 'warning'], 409);
+            return back()->with('warning', $message);
+        }
         $connected = false;
         try {
             $connected = $device->connect();
-            if (! $connected) return back()->with('error', 'Unable to connect to the device. Check its IP and network connection.');
+            if (! $connected) {
+                $message = 'Unable to connect to the device. Check its IP and network connection.';
+                if (request()->wantsJson()) return response()->json(['message' => $message, 'level' => 'error'], 422);
+                return back()->with('error', $message);
+            }
             $result = $importer->import($device->getAttendanceLogs());
-            return back()->with('success', "{$result['days']} attendance days updated; {$result['skipped']} unsupported or unmatched logs skipped. Device logs retained.");
+            $message = "{$result['days']} attendance days updated; {$result['skipped']} unsupported or unmatched logs skipped. Device logs retained.";
+            if (request()->wantsJson()) return response()->json(['message' => $message]);
+            return back()->with('success', $message);
         } catch (\Illuminate\Validation\ValidationException $e) { throw $e; }
-        catch (\Throwable $e) { report($e); return back()->with('error', 'Device sync failed. Check the device configuration, PHP sockets extension and application log.'); }
+        catch (\Throwable $e) {
+            report($e);
+            $message = 'Device sync failed. Check the device configuration, PHP sockets extension and application log.';
+            if (request()->wantsJson()) return response()->json(['message' => $message, 'level' => 'error'], 500);
+            return back()->with('error', $message);
+        }
         finally { try { if ($connected) $device->disconnect(); } catch (\Throwable $e) { report($e); } finally { $lock->release(); } }
     }
 }

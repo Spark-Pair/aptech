@@ -3,7 +3,44 @@ body {
 }
 .page-content {
     min-height:calc(100vh - 150px);
-    padding-bottom:40px
+    padding-bottom:40px;
+    transition:opacity .18s ease
+}
+.portal-loading .page-content {
+    opacity:.58;
+    pointer-events:none
+}
+.portal-loading:before {
+    content:"";
+    position:fixed;
+    top:0;
+    left:0;
+    z-index:2000;
+    width:100%;
+    height:3px;
+    background:#2a8bcc;
+    animation:portal-progress 1s ease-in-out infinite
+}
+.portal-toast {
+    position:fixed;
+    right:18px;
+    bottom:18px;
+    z-index:2100;
+    max-width:360px;
+    margin:0;
+    opacity:0;
+    transform:translateY(12px);
+    transition:opacity .2s ease,transform .2s ease;
+    box-shadow:0 8px 24px rgba(0,0,0,.18)
+}
+.portal-toast.is-visible {
+    opacity:1;
+    transform:translateY(0)
+}
+@keyframes portal-progress {
+    0% { transform:translateX(-100%) }
+    55% { transform:translateX(0) }
+    100% { transform:translateX(100%) }
 }
 .portal-date {
     float:right;

@@ -24,7 +24,9 @@ class OperationController extends Controller
         $logs = $reader->read($request->file('file'));
         $result = $importer->import($logs);
 
-        return back()->with('success', "{$result['days']} attendance days updated; {$result['skipped']} unmatched logs skipped.");
+        $message = "{$result['days']} attendance days updated; {$result['skipped']} unmatched logs skipped.";
+        if ($request->wantsJson()) return response()->json(['message' => $message]);
+        return back()->with('success', $message);
     }
 
     public function generate(Request $request, AttendanceCalendar $calendar, AttendanceReport $report)
@@ -32,7 +34,9 @@ class OperationController extends Controller
         $data = $request->validate(['month' => 'required|date_format:Y-m|before_or_equal:'.now()->format('Y-m')]);
         $count = $calendar->generate($data['month'], $report);
 
-        return back()->with('success', "$count missing attendance days generated.");
+        $message = "$count missing attendance days generated.";
+        if ($request->wantsJson()) return response()->json(['message' => $message]);
+        return back()->with('success', $message);
     }
 
     public function leaves(ReportRequest $request, AttendanceReport $report)
@@ -54,6 +58,7 @@ class OperationController extends Controller
         }
         $calendar->leave($data['empid'], $data['from'], $data['to']);
 
+        if ($request->wantsJson()) return response()->json(['message' => 'Leave recorded. Weekly off days were excluded.', 'refresh' => true]);
         return back()->with('success', 'Leave recorded. Weekly off days were excluded.');
     }
 }

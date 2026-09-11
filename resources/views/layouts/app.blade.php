@@ -20,7 +20,7 @@
         <div class="navbar-header pull-left"><a href="{{ route('dashboard') }}" class="navbar-brand"><small><i class="fa fa-leaf" aria-hidden="true"></i> Payroll System</small></a></div>
         <div class="navbar-buttons navbar-header pull-right"><ul class="nav ace-nav"><li class="light-blue">
             <a data-toggle="dropdown" href="#" class="dropdown-toggle" aria-label="Account menu" aria-haspopup="true"><i class="fa fa-user-circle-o" aria-hidden="true"></i> <span class="user-info"><small>Welcome,</small>{{ auth()->user()->name }}</span><i aria-hidden="true" class="ace-icon fa fa-caret-down"></i></a>
-            <ul class="user-menu dropdown-menu-right dropdown-menu"><li><form method="post" action="{{ route('logout') }}">@csrf<button class="account-logout" type="submit"><i aria-hidden="true" class="fa fa-power-off"></i> Sign out</button></form></li></ul>
+            <ul class="user-menu dropdown-menu-right dropdown-menu"><li><form method="post" action="{{ route('logout') }}" data-no-ajax>@csrf<button class="account-logout" type="submit"><i aria-hidden="true" class="fa fa-power-off"></i> Sign out</button></form></li></ul>
         </li></ul></div>
     </div>
 </div>

@@ -37,13 +37,17 @@ class EmployeeController extends Controller
 
     public function store(EmployeeRequest $request)
     {
-        $data=$request->validated(); $data['password']=Hash::make($data['password']); Employee::create($data);
-        return redirect()->route('employees.index',['employee'=>Employee::where('empid',$data['empid'])->value('id')])->with('success','Employee created.');
+        $data=$request->validated(); $data['password']=Hash::make($data['password']); $employee = Employee::create($data);
+        $url = route('employees.index',['employee'=>$employee->id]);
+        if ($request->wantsJson()) return response()->json(['message'=>'Employee created.','redirect'=>$url]);
+        return redirect($url)->with('success','Employee created.');
     }
     public function update(EmployeeRequest $request, Employee $employee)
     {
         $data=$request->validated(); if(!empty($data['password'])) $data['password']=Hash::make($data['password']); else unset($data['password']); $employee->update($data);
-        return redirect()->route('employees.index',['employee'=>$employee->id])->with('success','Employee updated.');
+        $url = route('employees.index',['employee'=>$employee->id]);
+        if ($request->wantsJson()) return response()->json(['message'=>'Employee updated.','redirect'=>$url]);
+        return redirect($url)->with('success','Employee updated.');
     }
     public function show(ReportRequest $request, Employee $employee) { return redirect()->route('employees.index',['employee'=>$employee->id,'month'=>$request->month()]); }
 }

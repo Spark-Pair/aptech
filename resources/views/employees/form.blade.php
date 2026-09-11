@@ -1,9 +1,9 @@
 @extends('layouts.app')
-@section('title', $employee->exists ? 'Edit Employee' : 'Add Employee')
+@section('title', 'Add Employee')
 @section('subtitle', 'Employee information')
 @section('content')
 <div class="widget-box"><div class="widget-header"><h4 class="widget-title"><i class="fa fa-user"></i> Employee Details</h4></div><div class="widget-body"><div class="widget-main">
-<form method="post" action="{{ $employee->exists ? route('employees.update',$employee) : route('employees.store') }}">@csrf @if($employee->exists)@method('put')@endif
+<form method="post" action="{{ route('employees.store') }}" data-no-ajax>@csrf
 <div class="row">
 <div class="col-sm-6">@if($employee->exists)<div class="form-group"><label>Machine Code</label><p class="form-control-static">{{ $employee->empid }} <small class="text-muted">(linked to attendance history)</small></p></div>@else<x-field name="empid" label="Machine Code" type="number" min="1" max="2147483647" required />@endif</div>
 <div class="col-sm-6"><x-field name="name" label="Employee Name" :value="$employee->name" required /></div>
