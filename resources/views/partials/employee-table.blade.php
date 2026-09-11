@@ -1,4 +1,4 @@
-<div class="table-header">Results Hello<span class="pull-right">{{ number_format($employees->total()) }} employees &middot; {{ \Carbon\Carbon::parse($month.'-01')->format('F Y') }}</span></div>
+<div class="table-header">Results<span class="pull-right">{{ number_format($employees->total()) }} employees &middot; {{ \Carbon\Carbon::parse($month.'-01')->format('F Y') }}</span></div>
 <div class="table-responsive">
     <table class="table table-striped table-bordered table-hover">
         <thead>
