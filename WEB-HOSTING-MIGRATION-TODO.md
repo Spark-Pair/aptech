@@ -58,7 +58,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Server-side status logic + UI integration guardrails prepared.
 - [x] Device-cursor risk separated from transport idempotency; staged-cutover rule recorded.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: fetch latest UI files from the now-updated branch and implement authenticated status polling. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent and must be recorded.
+- [~] Next: fetch latest UI files from updated branch and implement authenticated status polling. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent and must be recorded.
 
 ## Target
 ```text
