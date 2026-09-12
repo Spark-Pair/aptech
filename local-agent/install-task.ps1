@@ -7,6 +7,6 @@ if (!(Test-Path $config)) { throw "Create local-agent/config.json before install
 if ($LASTEXITCODE -ne 0) { throw "Local Agent requirements check failed." }
 $action = New-ScheduledTaskAction -Execute $PhpPath -Argument ('"' + $agent + '"') -WorkingDirectory $PSScriptRoot
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
 Register-ScheduledTask -TaskName "Aptech Attendance Sync Agent" -Action $action -Trigger $trigger -Settings $settings -Description "Syncs local ZKTeco attendance to the hosted Laravel API." -Force
 Write-Host "Attendance Sync Agent scheduled successfully."
