@@ -13,9 +13,11 @@ class EmployeeRequest extends FormRequest
     {
         $employee = $this->route('employee');
         return [
-            'empid' => [$employee ? 'prohibited' : 'required','integer','min:1','max:2147483647',Rule::unique('employees','empid')],
+            'empid' => $employee
+                ? ['prohibited']
+                : ['required','integer','min:1','max:2147483647',Rule::unique('employees','empid')],
             'name'=>'required|string|max:255','email'=>'nullable|email|max:255',
-            'username'=>['required','string','max:255',Rule::unique('employees')->ignore($employee)],
+            'username'=>['required','string','max:255',Rule::unique('employees','username')->ignore($employee?->getKey())],
             'password'=>[$employee ? 'nullable' : 'required','string','min:8','max:255'],
             'designation'=>'required|string|max:255','department'=>'required|string|max:255',
             'shift_id'=>'nullable|exists:shifts,id',
