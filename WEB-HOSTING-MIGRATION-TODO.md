@@ -18,11 +18,11 @@
 
 ## MySQL / shared hosting
 - [~] Static compatibility audit positive; real MySQL execution required.
-- [x] MySQL clean-test and existing-data migration verification procedure documented in `docs/MYSQL-MIGRATION-CHECKLIST.md`.
+- [x] MySQL clean-test/existing-data verification procedure documented in `docs/MYSQL-MIGRATION-CHECKLIST.md`.
 - [ ] Clean migrate/seed on disposable MySQL; full CRUD/auth/HR/attendance/report regression.
 - [x] Hostinger deployment target documented in `docs/HOSTINGER-DEPLOYMENT.md`.
 - [ ] Verify target hosting PHP/extensions/document-root and staging MySQL/HTTPS.
-- [ ] Build an actual SQLite -> MySQL data importer only if real existing production data must be retained and after inspecting that source DB.
+- [ ] Build actual SQLite -> MySQL importer only if real existing production data must be retained after inspecting source DB.
 
 ## Local Sync Agent
 - [x] Windows-first PHP CLI MVP, external gitignored config, configurable device/API parameters.
@@ -31,13 +31,13 @@
 - [x] Heartbeat, acknowledged timestamp, safe rotating diagnostics.
 - [x] PowerShell Task Scheduler install/uninstall helpers with one-minute schedule and overlap prevention.
 - [x] Setup/security/recovery README.
-- [ ] Verify actual physical ZKTeco response shape.
-- [ ] Test internet/API/device loss, duplicate replay and PC restart recovery.
+- [x] End-to-end outage/replay/restart/token-rotation test procedure documented in `docs/LOCAL-AGENT-TEST-PLAN.md`.
+- [ ] Execute test plan against physical ZKTeco and staging API/MySQL; record actual device response shape.
 - [ ] Refine non-technical installer after real-device test.
 
 ## UI/status
 - [x] Existing AJAX layer retained; no SPA rewrite.
-- [x] Added reusable server status controller calculating active/online state from heartbeat and returning heartbeat/sync/error fields.
+- [x] Reusable server status controller calculates active/online from heartbeat and returns heartbeat/sync/error fields.
 - [ ] Wire status controller into authenticated existing web UI and poll asynchronously without changing visual language.
 
 ## Cutover/testing
@@ -50,7 +50,7 @@
 ## Progress — 2026-09-12
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
-- [x] Agent diagnostics, automatic Windows scheduling helpers, API contract, MySQL migration checklist and Hostinger deployment guide added.
+- [x] Agent diagnostics, Windows scheduling helpers, API contract, MySQL checklist, Hostinger guide and end-to-end recovery test plan added.
 - [x] API idempotency coverage expanded.
 - [x] Server-side agent status logic added for upcoming AJAX UI integration.
 - [x] Legacy hosted ZKTeco path intentionally preserved for staged migration.
