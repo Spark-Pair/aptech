@@ -49,5 +49,21 @@ class EmployeeController extends Controller
         if ($request->wantsJson()) return response()->json(['message'=>'Employee updated.','redirect'=>$url]);
         return redirect($url)->with('success','Employee updated.');
     }
-    public function show(ReportRequest $request, Employee $employee) { return redirect()->route('employees.index',['employee'=>$employee->id,'month'=>$request->month()]); }
+
+    public function show(ReportRequest $request, Employee $employee, AttendanceReport $report)
+    {
+        $month = $request->month();
+        $employees = $report->employees($month, $request->validated())->orderBy('name')->paginate(25)->withQueryString();
+        $departments = Employee::distinct()->orderBy('department')->pluck('department');
+        $selectedEmployee = $employee->load('shift');
+        $attendanceQuery = $report->attendance($month, ['empid'=>$selectedEmployee->empid]);
+        $selectedSummary = $report->summary(clone $attendanceQuery);
+        $selectedAttendances = $attendanceQuery->with('employee.shift')->orderBy('date')->get();
+        $selectedSummary['Total Records'] = $selectedAttendances->count();
+        $selectedSummary['Working Days'] = $selectedAttendances->where('status','!=','Off Day')->count();
+        $selectedSummary['Early Min'] = $selectedAttendances->sum(fn($attendance)=>(int)($attendance->early_minutes ?? 0));
+        $selectedSummary['Late Min'] = $selectedAttendances->sum(fn($attendance)=>(int)($attendance->late_minutes ?? 0));
+
+        return view('employees.index', compact('month','employees','departments','selectedEmployee','selectedAttendances','selectedSummary'));
+    }
 }
