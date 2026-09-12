@@ -30,10 +30,10 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] ZKTeco sockets only on office PC; outbound HTTPS only.
 - [x] Durable agent-only SQLite queue/checkpoint, UUID idempotency, capped retries/pending replay.
 - [x] Heartbeat, safe rotating diagnostics and acknowledged timestamp.
-- [x] Windows Task Scheduler install/uninstall helpers; installer now refuses setup if runtime prerequisites fail.
+- [x] Windows Task Scheduler install/uninstall helpers; prerequisite-gated install.
 - [x] Prerequisite checker validates PHP 8.1+, sockets, curl, pdo_sqlite, sqlite3 and Composer autoload.
-- [x] Setup/security/recovery guide + end-to-end failure/replay test plan.
-- [~] Timestamp checkpoint provisional until physical same-timestamp/backfill behavior verified; edge case documented.
+- [x] Setup/security/recovery guide + expanded physical failure/replay/checkpoint test plan.
+- [~] Timestamp checkpoint provisional until same-timestamp/backfill behavior verified; edge case explicitly tested in plan.
 - [ ] Execute physical ZKTeco test plan and record actual response shape.
 - [ ] Refine non-technical installer after real-device test.
 
@@ -53,10 +53,9 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 ## Progress — 2026-09-12
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
-- [x] Agent diagnostics, Windows scheduling, prerequisite checker, API contract, MySQL checklist, Hostinger guide, recovery test plan and docs index added.
-- [x] Windows installer now gates installation on prerequisites.
+- [x] Agent diagnostics, Windows scheduling, prerequisite checker/gate, API contract, MySQL checklist, Hostinger guide, recovery/checkpoint test plan and docs index added.
 - [x] Server-side status logic + safe UI integration plan prepared.
-- [x] Timestamp checkpoint edge case explicitly tracked.
+- [x] Timestamp checkpoint risk explicitly tracked and added to physical tests.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
 - [~] Next: authenticated device/sync status UI wiring after latest Blade review. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent.
 
