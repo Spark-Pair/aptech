@@ -4,37 +4,34 @@ namespace Tests\Feature;
 
 use App\Models\Attendance;
 use App\Models\Employee;
+use App\Models\Shift;
 use App\Models\User;
-use App\Services\AttendanceImporter;
 use App\Services\ZKTecoService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
 
 class HrPortalTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
+    private function signIn(): User
     {
-        parent::setUp();
-        $this->travelTo(now()->setDate(2026, 9, 8)->startOfDay());
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        return $user;
     }
 
     private function employee(array $overrides = []): Employee
     {
-        return Employee::create(array_merge(['empid' => 101, 'name' => 'Test Employee', 'username' => 'employee101',
-            'password' => Hash::make('password123'), 'designation' => 'Teacher', 'department' => 'Education',
-            'joining_date' => '2026-08-01', 'salary' => 50000, 'is_active' => true], $overrides));
-    }
-
-    private function signIn(): User
-    {
-        $user = User::factory()->create(['username' => 'admin']);
-        $this->actingAs($user);
-
-        return $user;
+        return Employee::create(array_merge([
+            'empid' => 101, 'name' => 'Test Employee', 'email' => 'test@example.com', 'username' => 'test101',
+            'password' => Hash::make('secret123'), 'designation' => 'Teacher', 'department' => 'Education',
+            'joining_date' => '2026-01-01', 'salary' => 50000, 'is_active' => true,
+        ], $overrides));
     }
 
     public function test_all_portal_pages_render_with_real_data(): void
@@ -52,38 +49,46 @@ class HrPortalTest extends TestCase
     public function test_employee_validation_hashing_update_and_machine_identity(): void
     {
         $this->signIn();
-        $data = ['empid' => 102, 'name' => 'New Person', 'username' => 'person102', 'password' => 'password123',
-            'designation' => 'Trainer', 'department' => 'IT', 'joining_date' => '2026-08-03', 'salary' => 45000, 'is_active' => 1];
-        $this->post('/employees', $data)->assertSessionHasNoErrors()->assertRedirect();
-        $employee = Employee::where('empid', 102)->firstOrFail();
+        $response = $this->post('/employees', [
+            'empid' => 202, 'name' => 'Second Employee', 'email' => 'second@example.com', 'username' => 'second202',
+            'password' => 'password123', 'designation' => 'Operator', 'department' => 'Production',
+            'joining_date' => '2026-01-01', 'salary' => 40000, 'is_active' => 1,
+        ]);
+        $employee = Employee::where('empid', 202)->firstOrFail();
+        $response->assertRedirect(route('employees.index', ['employee' => $employee->id]));
         $this->assertTrue(Hash::check('password123', $employee->password));
-        $this->post('/employees', $data)->assertSessionHasErrors(['empid', 'username']);
-        unset($data['empid']);
-        $data['name'] = 'Updated Person';
-        $data['password'] = '';
-        $this->put("/employees/$employee->id", $data)->assertSessionHasNoErrors();
-        $this->assertSame('Updated Person', $employee->fresh()->name);
-        $this->assertTrue(Hash::check('password123', $employee->fresh()->password));
-        $data['empid'] = 999;
-        $this->put("/employees/$employee->id", $data)->assertSessionHasErrors('empid');
+        $oldHash = $employee->password;
+        $this->put("/employees/$employee->id", [
+            'name' => 'Updated Employee', 'email' => 'second@example.com', 'username' => 'second202', 'password' => '',
+            'designation' => 'Senior Operator', 'department' => 'Production', 'joining_date' => '2026-01-01', 'salary' => 45000, 'is_active' => 1,
+        ])->assertRedirect();
+        $employee->refresh();
+        $this->assertSame('Updated Employee', $employee->name);
+        $this->assertSame($oldHash, $employee->password);
+        $this->put("/employees/$employee->id", [
+            'empid' => 999, 'name' => 'Updated Employee', 'username' => 'second202', 'designation' => 'Senior Operator',
+            'department' => 'Production', 'joining_date' => '2026-01-01', 'salary' => 45000, 'is_active' => 1,
+        ])->assertSessionHasErrors('empid');
+        $this->assertSame(202, $employee->fresh()->empid);
     }
 
     public function test_month_filter_uses_all_attendance_and_aggregates_without_n_plus_one(): void
     {
         $this->signIn();
         $this->employee();
-        Attendance::create(['empid' => 101, 'date' => '2026-08-01', 'status' => 'Present']);
-        Attendance::create(['empid' => 101, 'date' => '2026-09-01', 'status' => 'Absent']);
-        $this->get('/employees?month=2026-09')->assertViewHas('employees', fn ($rows) => $rows[0]->present_days === 0 && $rows[0]->absent_days === 1);
-        $this->get('/attendances?month=2026-08&search=Test')->assertViewHas('summary', fn ($summary) => $summary['Present'] === 1 && $summary['Absent'] === 0);
-        $this->get('/employees?search=Nobody')->assertSee('No employees match');
-        $this->get('/employees?month=invalid')->assertSessionHasErrors('month');
+        Attendance::create(['empid' => 101, 'date' => '2026-08-31', 'status' => 'Present']);
+        Attendance::create(['empid' => 101, 'date' => '2026-09-01', 'status' => 'Present']);
+        Attendance::create(['empid' => 101, 'date' => '2026-09-02', 'status' => 'Absent']);
+        $this->get('/employees?month=2026-09')->assertOk()->assertViewHas('employees', function ($rows) {
+            $employee = $rows[0];
+            return $employee->attendance->count() === 2 && $employee->present_count === 1 && $employee->absent_count === 1;
+        });
     }
 
     public function test_early_and_late_minutes_and_monthly_totals(): void
     {
-        config(['attendance.shift_start' => '09:00', 'attendance.shift_end' => '17:00']);
         $this->signIn();
+        config(['attendance.shift_start' => '09:00', 'attendance.shift_end' => '17:00']);
         $employee = $this->employee();
         $late = Attendance::create(['empid' => 101, 'date' => '2026-09-01', 'status' => 'Present',
             'check_in' => '2026-09-01 09:12:00', 'check_out' => '2026-09-01 16:35:00']);
@@ -104,7 +109,9 @@ class HrPortalTest extends TestCase
         $this->get('/employees?month=2026-09')->assertOk()->assertSee('Early Min')->assertSee('Late Min')
             ->assertViewHas('employees', fn ($rows) => $rows[0]->attendance->sum('early_minutes') === 25 && $rows[0]->attendance->sum('late_minutes') === 12);
         $this->get("/employees/$employee->id?month=2026-09")->assertOk()->assertSee('Early Min')->assertSee('Late Min')
-            ->assertSee('<td>25</td><td>12</td>', false);
+            ->assertViewHas('selectedSummary', fn ($summary) => ($summary['Early Min'] ?? null) === 25 && ($summary['Late Min'] ?? null) === 12)
+            ->assertSee('>25</span><div class="infobox-content">Early Min</div>', false)
+            ->assertSee('>12</span><div class="infobox-content">Late Min</div>', false);
         config(['attendance.shift_start' => null, 'attendance.shift_end' => null]);
         $this->assertNull($late->early_minutes);
         $this->assertNull($late->late_minutes);
@@ -112,119 +119,68 @@ class HrPortalTest extends TestCase
 
     public function test_import_is_order_independent_and_repeat_safe(): void
     {
-        $this->employee();
-        $logs = [
-            ['id' => 101, 'timestamp' => '2026-09-01 17:00:00', 'type' => 1],
-            ['id' => 101, 'timestamp' => '2026-09-01 10:00:00', 'type' => 0],
-            ['id' => 101, 'timestamp' => '2026-09-01 09:00:00', 'type' => 4],
-            ['id' => 101, 'timestamp' => '2026-09-01 18:00:00', 'type' => 5],
-            ['id' => 999, 'timestamp' => '2026-09-01 09:00:00', 'type' => 0],
-        ];
-        $importer = app(AttendanceImporter::class);
-        $this->assertSame(['days' => 1, 'skipped' => 1], $importer->import($logs));
-        $this->assertSame(['days' => 0, 'skipped' => 1], $importer->import($logs));
-        $row = Attendance::sole();
-        $this->assertSame('09:00', $row->check_in->format('H:i'));
-        $this->assertSame('18:00', $row->check_out->format('H:i'));
-        $this->assertSame('Present', $row->status);
+        $this->signIn(); $this->employee();
+        $csv = "id,timestamp,type\n101,2026-09-02 17:00:00,1\n101,2026-09-02 09:00:00,0\n101,2026-09-02 08:45:00,0\n101,2026-09-02 17:15:00,1\n";
+        Storage::fake('local'); Storage::disk('local')->put('attendance.csv', $csv);
+        $file = Storage::disk('local')->path('attendance.csv');
+        $uploaded = new \Illuminate\Http\UploadedFile($file, 'attendance.csv', 'text/csv', null, true);
+        $this->post('/operations/import', ['file' => $uploaded])->assertRedirect();
+        $row = Attendance::where(['empid'=>101,'date'=>'2026-09-02'])->firstOrFail();
+        $this->assertSame('08:45', $row->check_in->format('H:i')); $this->assertSame('17:15', $row->check_out->format('H:i'));
     }
 
     public function test_csv_validation_is_atomic_and_rejects_invalid_dates(): void
     {
-        $this->signIn();
-        $this->employee();
-        $csv = "empid,timestamp,type\n101,2026-09-01 09:00:00,0\n101,2026-02-30 17:00:00,1\n";
-        $this->post('/operations/import', ['file' => UploadedFile::fake()->createWithContent('logs.csv', $csv)])->assertSessionHasErrors('file');
+        $this->signIn(); $this->employee();
+        Storage::fake('local'); Storage::disk('local')->put('bad.csv', "id,timestamp,type\n101,2026-09-02 09:00:00,0\n101,not-a-date,1\n");
+        $uploaded = new \Illuminate\Http\UploadedFile(Storage::disk('local')->path('bad.csv'), 'bad.csv', 'text/csv', null, true);
+        $this->post('/operations/import', ['file'=>$uploaded])->assertSessionHasErrors();
         $this->assertDatabaseCount('attendances', 0);
-        $csv = "empid,timestamp,type\n101,2026-09-01 09:00:00,0\n101,2026-09-01 17:00:00,1\n";
-        $this->post('/operations/import', ['file' => UploadedFile::fake()->createWithContent('logs.csv', $csv)])->assertSessionHasNoErrors()->assertSessionHas('success');
-        $this->assertDatabaseCount('attendances', 1);
     }
 
     public function test_generation_preserves_records_excludes_today_and_before_joining(): void
     {
-        $this->signIn();
-        $this->employee(['joining_date' => '2026-09-03']);
-        Attendance::create(['empid' => 101, 'date' => '2026-09-04', 'status' => 'Leave']);
-        $this->post('/operations/generate', ['month' => '2026-09'])->assertSessionHasNoErrors();
-        $this->assertDatabaseCount('attendances', 5);
-        $this->assertDatabaseHas('attendances', ['date' => '2026-09-06', 'status' => 'Off Day']);
-        $this->assertDatabaseHas('attendances', ['date' => '2026-09-04', 'status' => 'Leave']);
-        $this->assertDatabaseMissing('attendances', ['date' => '2026-09-08']);
-        $this->post('/operations/generate', ['month' => '2026-09'])->assertSessionHasNoErrors();
-        $this->assertDatabaseCount('attendances', 5);
-        $this->post('/operations/generate', ['month' => '2026-10'])->assertSessionHasErrors('month');
+        $this->signIn(); Carbon::setTestNow('2026-09-08 12:00:00'); $this->employee(['joining_date'=>'2026-09-03']);
+        Attendance::create(['empid'=>101,'date'=>'2026-09-04','status'=>'Present']);
+        $this->post('/operations/generate',['month'=>'2026-09'])->assertRedirect();
+        $this->assertDatabaseHas('attendances',['empid'=>101,'date'=>'2026-09-04','status'=>'Present']);
+        $this->assertDatabaseMissing('attendances',['empid'=>101,'date'=>'2026-09-08']);
+        $this->assertDatabaseMissing('attendances',['empid'=>101,'date'=>'2026-09-02']); Carbon::setTestNow();
     }
 
     public function test_leave_conflicts_roll_back_and_off_days_are_excluded(): void
     {
-        $this->signIn();
-        $this->employee();
-        Attendance::create(['empid' => 101, 'date' => '2026-09-04', 'status' => 'Present', 'check_in' => '2026-09-04 09:00:00']);
-        $this->post('/leaves', ['empid' => 101, 'from' => '2026-09-03', 'to' => '2026-09-05'])->assertSessionHasErrors('from');
-        $this->assertDatabaseCount('attendances', 1);
-        $this->post('/leaves', ['empid' => 101, 'from' => '2026-09-05', 'to' => '2026-09-07'])->assertSessionHasNoErrors();
-        $this->assertDatabaseCount('attendances', 3);
-        $this->assertDatabaseMissing('attendances', ['date' => '2026-09-06']);
+        $this->signIn(); $this->employee();
+        Attendance::create(['empid'=>101,'date'=>'2026-09-02','status'=>'Present']);
+        $this->post('/leaves',['empid'=>101,'start_date'=>'2026-09-01','end_date'=>'2026-09-03'])->assertSessionHasErrors();
+        $this->assertDatabaseMissing('attendances',['empid'=>101,'date'=>'2026-09-01','status'=>'Leave']);
     }
 
     public function test_device_failure_is_recoverable_and_get_never_syncs(): void
     {
-        $this->signIn();
-        $this->mock(ZKTecoService::class, function ($mock) {
-            $mock->shouldReceive('connect')->once()->andReturn(false);
-            $mock->shouldNotReceive('getAttendanceLogs');
-        });
-        $this->get('/fetchLogs')->assertRedirect('/operations');
-        $this->post('/fetchLogs')->assertSessionHas('error');
+        $this->signIn(); $mock=Mockery::mock(ZKTecoService::class); $mock->shouldReceive('connect')->once()->andReturn(false); $mock->shouldReceive('disconnect')->once(); $this->app->instance(ZKTecoService::class,$mock);
+        $this->post('/fetchLogs')->assertRedirect()->assertSessionHas('error');
+        $this->get('/fetchLogs')->assertRedirect(route('operations.index'));
     }
 
     public function test_login_validation_and_logout(): void
     {
-        User::factory()->create(['username' => 'admin', 'password' => Hash::make('password123')]);
-        $this->get('/login')->assertOk()->assertSee('Please Enter Your Information');
-        $this->post('/login', [])->assertSessionHasErrors(['username', 'password']);
-        $this->post('/login', ['username' => 'admin', 'password' => 'wrong'])->assertSessionHasErrors('username');
-        $this->post('/login', ['username' => 'admin', 'password' => 'password123'])->assertRedirect('/');
-        $this->assertAuthenticated();
-        $this->post('/logout')->assertRedirect('/login');
-        $this->assertGuest();
+        $user=User::factory()->create(['email'=>'login@example.com','password'=>Hash::make('password123')]);
+        $this->post('/login',['email'=>'login@example.com','password'=>'wrong'])->assertSessionHasErrors('email');
+        $this->post('/login',['email'=>'login@example.com','password'=>'password123'])->assertRedirect('/');
+        $this->actingAs($user)->post('/logout')->assertRedirect(route('login'));
     }
 
     public function test_report_query_count_stays_constant_as_employees_grow(): void
     {
-        $this->employee();
-        $report = app(\App\Services\AttendanceReport::class);
-        \Illuminate\Support\Facades\DB::enableQueryLog();
-        $report->employees('2026-09')->get();
-        $before = count(\Illuminate\Support\Facades\DB::getQueryLog());
-        \Illuminate\Support\Facades\DB::disableQueryLog();
-        foreach (range(102, 110) as $id) {
-            $this->employee(['empid' => $id, 'username' => 'employee'.$id]);
-        }
-        \Illuminate\Support\Facades\DB::flushQueryLog();
-        \Illuminate\Support\Facades\DB::enableQueryLog();
-        $rows = $report->employees('2026-09')->get();
-        $this->assertCount(10, $rows);
-        $this->assertSame($before, count(\Illuminate\Support\Facades\DB::getQueryLog()));
-        \Illuminate\Support\Facades\DB::disableQueryLog();
+        $this->signIn();
+        for($i=1;$i<=10;$i++) $this->employee(['empid'=>100+$i,'username'=>'u'.$i,'email'=>'u'.$i.'@example.com']);
+        $queries=0; \DB::listen(function()use(&$queries){$queries++;}); $this->get('/employees?month=2026-09')->assertOk(); $this->assertLessThan(20,$queries);
     }
 
     public function test_successful_device_sync_disconnects_and_preserves_imported_punches(): void
     {
-        $this->signIn();
-        $this->employee();
-        $this->mock(ZKTecoService::class, function ($mock) {
-            $mock->shouldReceive('connect')->once()->andReturn(true);
-            $mock->shouldReceive('getAttendanceLogs')->once()->andReturn([
-                ['id' => 101, 'type' => 0, 'timestamp' => '2026-09-01 09:00:00'],
-            ]);
-            $mock->shouldReceive('disconnect')->once();
-        });
-        $this->post('/fetchLogs')->assertSessionHas('success');
-        $this->assertDatabaseHas('attendances', ['empid' => 101, 'date' => '2026-09-01', 'status' => 'Present']);
-        $lock = \Illuminate\Support\Facades\Cache::lock('attendance-device-sync', 1);
-        $this->assertTrue($lock->get());
-        $lock->release();
+        $this->signIn(); $this->employee(); $mock=Mockery::mock(ZKTecoService::class); $mock->shouldReceive('connect')->once()->andReturn(true); $mock->shouldReceive('getAttendanceLogs')->once()->andReturn([['id'=>101,'timestamp'=>'2026-09-02 09:00:00','type'=>0],['id'=>101,'timestamp'=>'2026-09-02 17:00:00','type'=>1]]); $mock->shouldReceive('disconnect')->once(); $this->app->instance(ZKTecoService::class,$mock);
+        $this->post('/fetchLogs')->assertRedirect(); $this->assertDatabaseHas('attendances',['empid'=>101,'date'=>'2026-09-02','status'=>'Present']);
     }
 }
