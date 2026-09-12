@@ -46,9 +46,9 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [ ] Runtime-test authenticated/unauthenticated status behavior and AJAX navigation/poll lifecycle in browser.
 
 ## Cutover/testing
-- [~] First automated runtime suite executed on Windows: 16 passed, 3 failed, 1 skipped, 95 assertions. Failures traced to employee edit/update routing and update unique validation; fixes committed. Re-run required.
+- [~] Second Windows runtime suite: 17 passed, 2 failed, 1 skipped, 99 assertions. Employee create/update regression is now fixed. Remaining two failures are both legacy employee detail GET expecting 200 while controller redirected to the AJAX index/detail state; controller changed to render the same existing employees index/detail view directly for route/test compatibility. Re-run required.
 - [x] Attendance Agent API runtime checks passed for missing token, active heartbeat, inactive agent rejection, wrong device rejection and bounded log validation.
-- [~] Successful sync replay/idempotency test is still skipped because its employee/import fixture is not yet implemented.
+- [~] Successful sync replay/idempotency test now has an explicit employee fixture using machine `empid` 101 and asserts one sync batch plus imported attendance; runtime re-run required.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
 - [ ] UI regression and async stale-data checks.
 - [x] Staged-cutover rule documented: Local Agent existence alone never removes legacy direct-device code.
@@ -60,11 +60,12 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Audit + secure API + Local Agent foundation completed.
 - [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan, result log and docs index added.
 - [x] Local Sync Agent status wired into existing Operations UI through authenticated endpoint and 30-second AJAX polling.
-- [x] First real `php artisan test` run received: dependencies/autoload/cache clear succeeded; 16 tests passed, 3 failed, 1 skipped.
-- [x] Fixed missing employee `edit`/`update` resource routes that caused the two 302 failures.
-- [x] Fixed employee update validation so unchanged username correctly ignores the current employee and immutable `empid` remains prohibited on update.
+- [x] First runtime: 16 passed, 3 failed, 1 skipped. Employee edit/update routes and unique validation fixed.
+- [x] Second runtime: 17 passed, 2 failed, 1 skipped. Both remaining failures isolated to employee detail GET redirect semantics.
+- [x] Employee detail GET now renders the existing employees index/detail view with the selected employee and monthly attendance instead of returning a redirect; UI design remains unchanged.
+- [x] Attendance Agent idempotency test no longer depends on external seeded data; explicit employee fixture added and machine `empid` used in device logs.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: pull latest `web-hosting-sync` and rerun `php artisan test`. If green except the intentional idempotency skip, implement that fixture/test, then move to clean MySQL verification.
+- [~] Next: pull latest `web-hosting-sync`, clear caches and rerun `php artisan test`. Target is zero failures and zero skips; then proceed to clean disposable MySQL verification.
 
 ## Target
 ```text
