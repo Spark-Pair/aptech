@@ -46,7 +46,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [ ] Runtime-test authenticated/unauthenticated status behavior and AJAX navigation/poll lifecycle in browser.
 
 ## Cutover/testing
-- [~] Fourth Windows runtime suite: 16 passed, 4 failed, 0 skipped, 92 assertions. Failures were traced to stale test-contract assumptions rather than new production regressions: report count aliases are `present_days`/`absent_days`; CSV contract requires `empid,timestamp,type`; failed device connection intentionally does not disconnect an unconnected client; login contract is username/password. Regression tests updated to those actual contracts; re-run required.
+- [x] Windows regression suite is green: 20 passed, 0 failed, 0 skipped, 104 assertions on 2026-09-12 after aligning stale tests with actual application contracts.
 - [x] Attendance Agent API runtime checks pass, including successful batch replay/idempotency.
 - [x] Successful sync replay/idempotency test has explicit employee fixture, uses machine `empid`, verifies one sync batch and imported attendance.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
@@ -64,8 +64,9 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Employee detail and monthly Early/Late presentation regression coverage aligned with current UI without redesigning production views.
 - [x] Fourth runtime exposed four stale HR test assumptions. Each was checked against production source contracts before changing tests.
 - [x] HR tests now use report aliases `present_days`/`absent_days`/`working_days`, the documented CSV `empid` header, username login, and correct failed-connect cleanup semantics. Import test also explicitly replays the same valid CSV and asserts a single attendance row.
+- [x] Fifth Windows runtime is fully green: 20 tests passed, 104 assertions, no failures and no skipped tests.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: pull latest `web-hosting-sync`, clear caches and rerun `php artisan test`. Target zero failures/zero skips. If green, proceed immediately to disposable MySQL verification.
+- [~] Next: execute the documented clean verification against a disposable MySQL database, then record actual MySQL results before Hostinger staging/physical-device cutover work.
 
 ## Target
 ```text
