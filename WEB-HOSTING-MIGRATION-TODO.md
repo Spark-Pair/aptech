@@ -23,8 +23,11 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Clean migrate/seed on disposable MySQL completed; expanded automated CRUD/auth/HR/attendance/report/status regression passes: 22 tests, 119 assertions.
 - [x] Dedicated `phpunit.mysql.xml` keeps the existing SQLite test configuration intact and targets the disposable MySQL test database without storing its password.
 - [x] Hostinger deployment/update/rollback target documented.
-- [ ] Verify actual Hostinger PHP/extensions/document-root and staging MySQL/HTTPS.
-- [ ] Build SQLite -> MySQL importer only if real production data must be retained, after inspecting source DB.
+- [~] Actual Hostinger verification in progress: PHP 8.2.33 and required PDO/MySQL/XML/mbstring/openssl/fileinfo extensions confirmed; Laravel 10.48.28 runs in production mode with debug off, HTTPS APP_URL, file cache/session and sync queue. Live project currently sits under `public_html` with an internal rewrite to `public/`, so final document-root/security review remains.
+- [x] Hostinger database connectivity verified against MariaDB 11.8.9 at `127.0.0.1`; target database was initially empty.
+- [x] Isolated `web-hosting-sync` staging checkout created outside live `public_html`; Composer production dependencies install successfully on Hostinger.
+- [x] Target MariaDB schema now has all nine `web-hosting-sync` migrations applied; the two Local Sync Agent migrations were applied from the isolated staging checkout without switching the live app away from SQLite.
+- [~] SQLite -> MySQL migration is required: live production SQLite contains real data (1 user, 2 employees, 1 shift, 47 attendances). Source schema/data inspection and safe importer/transfer verification remain before cutover.
 
 ## Local Sync Agent
 - [x] Windows-first PHP CLI MVP; external gitignored config and configurable device/API parameters.
@@ -76,8 +79,11 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Post-fix SQLite verification completed twice consecutively: both runs 22/22 tests, 119 assertions.
 - [x] Post-fix MySQL 8.0.46 verification completed: 22/22 tests, 119 assertions using `phpunit.mysql.xml`.
 - [x] Browser on-demand status verification completed: no automatic repeat while idle; one fresh request when returning to Operations through AJAX navigation.
+- [x] Actual Hostinger runtime verified: PHP 8.2.33, required extensions present, Laravel 10.48.28, Composer 2.9.8, production/debug/driver settings suitable for shared hosting.
+- [x] Hostinger MariaDB 11.8.9 connection verified; isolated `web-hosting-sync` checkout installed successfully and all nine target migrations are now `Ran` in the staging MariaDB database.
+- [x] Real production SQLite data confirmed and retained; live app remains on SQLite during staging migration work.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: actual Hostinger staging PHP/extensions/document-root/MySQL/HTTPS verification, then physical ZKTeco end-to-end cutover testing.
+- [~] Next: inspect production SQLite source schema/tables, implement and verify safe SQLite -> MariaDB transfer, complete document-root/HTTPS security checks, then physical ZKTeco end-to-end cutover testing.
 
 ## Target
 ```text
