@@ -28,17 +28,17 @@
 - [x] ZKTeco sockets only on office PC; outbound HTTPS only.
 - [x] Durable agent-only SQLite queue/checkpoint, UUID idempotency, capped retries/pending replay.
 - [x] Heartbeat, safe rotating diagnostics and acknowledged timestamp.
-- [x] Windows Task Scheduler install/uninstall helpers.
-- [x] Agent prerequisite checker for PHP 8.1+, sockets, curl, pdo_sqlite and sqlite3.
-- [x] Setup/security/recovery guide and end-to-end failure/replay test plan.
+- [x] Windows Task Scheduler install/uninstall helpers and prerequisite checker.
+- [x] Setup/security/recovery guide + end-to-end failure/replay test plan.
+- [~] Timestamp checkpoint is provisional; physical test must verify same-timestamp/delayed-device-log behavior. Edge case documented in `docs/IMPLEMENTATION-NOTES.md`; use per-punch fingerprint/cursor if needed.
 - [ ] Execute physical ZKTeco test plan and record actual response shape.
 - [ ] Refine non-technical installer after real-device test.
 
 ## UI/status
 - [x] Existing AJAX layer retained; no SPA rewrite.
 - [x] Server status controller prepared for active/online/heartbeat/sync/error data.
-- [x] No-redesign authenticated AJAX status integration rules documented in `docs/STATUS-UI-INTEGRATION.md`.
-- [ ] Review latest operations/attendance Blade on updated branch, then wire authenticated status route/region/polling without disrupting current UI.
+- [x] No-redesign authenticated AJAX status integration rules documented.
+- [ ] Review latest operations/attendance Blade on updated branch, then wire authenticated status route/region/polling.
 
 ## Cutover/testing
 - [ ] Execute full automated suite in checked-out runtime.
@@ -52,6 +52,7 @@
 - [x] Audit + secure API + Local Agent foundation completed.
 - [x] Agent diagnostics, Windows scheduling, prerequisite checker, API contract, MySQL checklist, Hostinger guide and recovery test plan added.
 - [x] Server-side status logic + safe UI integration plan prepared.
+- [x] Identified/documented timestamp-checkpoint edge case instead of falsely marking physical duplicate safety verified.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
 - [~] Next: authenticated device/sync status UI wiring after latest Blade review. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent.
 
