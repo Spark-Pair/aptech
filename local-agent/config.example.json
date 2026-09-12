@@ -1,0 +1,12 @@
+{
+  "api_base_url": "https://example.com",
+  "api_token": "PASTE_ONE_TIME_PROVISIONED_TOKEN_HERE",
+  "device_identifier": "zk-office-1",
+  "device_ip": "192.168.100.125",
+  "device_port": 4370,
+  "device_timeout": 5,
+  "batch_size": 500,
+  "http_timeout": 20,
+  "retry_base_seconds": 30,
+  "retry_max_seconds": 1800
+}
