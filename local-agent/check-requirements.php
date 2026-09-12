@@ -1,0 +1,2 @@
+<?php
+$requirements=['PHP >= 8.1'=>version_compare(PHP_VERSION,'8.1.0','>='),'sockets'=>extension_loaded('sockets'),'curl'=>extension_loaded('curl'),'pdo_sqlite'=>extension_loaded('pdo_sqlite'),'sqlite3'=>extension_loaded('sqlite3')];$ok=true;foreach($requirements as $name=>$pass){echo ($pass?'[OK] ':'[FAIL] ').$name.PHP_EOL;$ok=$ok&&$pass;}echo PHP_EOL.'PHP: '.PHP_VERSION.' ('.PHP_BINARY.')'.PHP_EOL;exit($ok?0:1);
