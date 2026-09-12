@@ -19,9 +19,9 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 
 ## MySQL / shared hosting
 - [~] Static compatibility audit positive; real MySQL execution required.
-- [x] MySQL clean-test/existing-data verification checklist documented.
+- [x] MySQL clean-test/existing-data verification checklist documented and linked to result logging.
 - [ ] Clean migrate/seed on disposable MySQL; full CRUD/auth/HR/attendance/report regression.
-- [x] Hostinger deployment target documented.
+- [x] Hostinger deployment/update/rollback target documented.
 - [ ] Verify actual Hostinger PHP/extensions/document-root and staging MySQL/HTTPS.
 - [ ] Build SQLite -> MySQL importer only if real production data must be retained, after inspecting source DB.
 
@@ -47,7 +47,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [ ] Execute full automated suite in checked-out runtime.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
 - [ ] UI regression and async stale-data checks.
-- [x] Staged-cutover rule documented: Local Agent existence alone is never enough to remove legacy direct-device code.
+- [x] Staged-cutover rule documented: Local Agent existence alone never removes legacy direct-device code.
 - [ ] Only after replacement proves stable, disable/remove hosted ZKTeco socket/private-LAN dependency.
 - [ ] Final security review, backup/rollback, explicit approval, then merge.
 
@@ -56,7 +56,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Audit + secure API + Local Agent foundation completed.
 - [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan, result log and docs index added.
 - [x] Server-side status logic + UI integration guardrails prepared.
-- [x] Device-cursor risk separated from server transport idempotency; staged-cutover rule recorded.
+- [x] Device-cursor risk separated from transport idempotency; staged-cutover rule recorded.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
 - [~] Next: authenticated device/sync status UI wiring after latest Blade review. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent and must be recorded.
 
