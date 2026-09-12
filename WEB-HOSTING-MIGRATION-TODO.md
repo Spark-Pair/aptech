@@ -19,7 +19,8 @@
 ## MySQL / shared hosting
 - [~] Static compatibility audit positive; real MySQL execution required.
 - [ ] Clean migrate/seed on MySQL; full CRUD/auth/HR/attendance/report regression.
-- [ ] Document Hostinger web-root, permissions, PHP extensions, `.env`, deploy/update/rollback.
+- [x] Hostinger target deployment guide added: `docs/HOSTINGER-DEPLOYMENT.md` (runtime, web-root, permissions, production env, deploy/update/rollback and verification checklist).
+- [ ] Verify actual target hosting PHP/extensions/document-root behavior.
 - [ ] Staging Hostinger MySQL + HTTPS verification.
 
 ## Local Sync Agent
@@ -52,9 +53,10 @@
 - [x] Audit + secure API foundation completed and API contract documented.
 - [x] Local Agent implemented: LAN reader, HTTPS client, durable queue/checkpoint, retry/idempotency, heartbeat, diagnostics.
 - [x] API idempotency coverage expanded.
-- [x] Windows automatic scheduled execution + uninstall helper and deployment README added.
+- [x] Windows scheduled execution/install/uninstall helpers and agent deployment README added.
+- [x] Hostinger deployment/update/rollback target documented.
 - [x] Legacy hosted ZKTeco path intentionally preserved for staged migration.
-- [~] Next: device/sync status UI. MySQL/Hostinger + physical ZKTeco verification require corresponding environments.
+- [~] Next: device/sync status UI. Real MySQL/Hostinger + physical ZKTeco verification require corresponding environments.
 
 ## Target
 ```text
