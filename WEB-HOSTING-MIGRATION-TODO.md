@@ -13,9 +13,9 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 ## Completed foundation
 - [x] Architecture/database/ZKTeco/AJAX audit.
 - [x] Versioned heartbeat/sync API, agent model, hashed revocable bearer credentials, device binding, validation/throttling.
-- [x] Server batch idempotency + acknowledgement + heartbeat/last-sync/error health fields.
+- [x] Server transport batch idempotency + acknowledgement + heartbeat/last-sync/error health fields.
 - [x] Existing `AttendanceImporter` remains authoritative hosted business logic.
-- [x] API contract and security controls documented; API auth/validation/idempotency test coverage added (runtime execution pending).
+- [x] API/security contract documented; auth/validation/idempotency test coverage added (runtime execution pending).
 
 ## MySQL / shared hosting
 - [~] Static compatibility audit positive; real MySQL execution required.
@@ -28,13 +28,12 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 ## Local Sync Agent
 - [x] Windows-first PHP CLI MVP; external gitignored config and configurable device/API parameters.
 - [x] ZKTeco sockets only on office PC; outbound HTTPS only.
-- [x] Durable agent-only SQLite queue/checkpoint, UUID idempotency, capped retries/pending replay.
+- [x] Durable agent-only SQLite queue/checkpoint, UUID transport idempotency, capped retries/pending replay.
 - [x] Heartbeat, safe rotating diagnostics and acknowledged timestamp.
 - [x] Windows Task Scheduler install/uninstall helpers; prerequisite gate, overlap prevention, execution ceiling.
 - [x] Prerequisite checker validates PHP 8.1+, sockets, curl, pdo_sqlite, sqlite3 and Composer autoload.
 - [x] Setup/security/recovery guide + expanded physical failure/replay/checkpoint test plan.
-- [x] Dedicated `docs/PHYSICAL-TEST-RESULTS.md` created so environment-dependent results are recorded rather than assumed.
-- [~] Timestamp checkpoint provisional until same-timestamp/backfill behavior verified.
+- [~] Timestamp checkpoint provisional until same-timestamp/backfill behavior verified; transport idempotency and device-cursor safety are explicitly treated separately.
 - [ ] Execute physical ZKTeco test plan and record actual response shape/results.
 - [ ] Refine non-technical installer after real-device test.
 
@@ -56,9 +55,9 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Audit + secure API + Local Agent foundation completed.
 - [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan, result log and docs index added.
 - [x] Server-side status logic + safe UI integration plan prepared.
-- [x] Timestamp checkpoint risk explicitly tracked and added to physical tests.
+- [x] Device-cursor risk explicitly separated from server transport idempotency and added to physical tests.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: authenticated device/sync status UI wiring after latest Blade review. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent and must be recorded in the result log.
+- [~] Next: authenticated device/sync status UI wiring after latest Blade review. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent and must be recorded.
 
 ## Target
 ```text
