@@ -40,7 +40,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 ## UI/status
 - [x] Existing AJAX layer retained; no SPA rewrite.
 - [x] Server status controller prepared for active/online/heartbeat/sync/error data.
-- [x] No-redesign authenticated AJAX status integration rules documented.
+- [x] No-redesign authenticated AJAX status integration guardrails documented.
 - [ ] Review latest operations/attendance Blade on updated branch, then wire authenticated status route/region/polling.
 
 ## Cutover/testing
@@ -54,7 +54,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
 - [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan, result log and docs index added.
-- [x] Server-side status logic + safe UI integration plan prepared.
+- [x] Server-side status logic + UI integration guardrails prepared.
 - [x] Device-cursor risk separated from server transport idempotency throughout docs/tests/security notes.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
 - [~] Next: authenticated device/sync status UI wiring after latest Blade review. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent and must be recorded.
