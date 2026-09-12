@@ -13,6 +13,7 @@
 - [x] Versioned heartbeat/sync API, agent model, hashed revocable bearer credentials, device binding, validation/throttling.
 - [x] Server batch idempotency + acknowledgement + heartbeat/last-sync/error health fields.
 - [x] Existing `AttendanceImporter` remains authoritative hosted business logic.
+- [x] API contract documented in `docs/LOCAL-AGENT-API.md`.
 - [x] Initial API tests plus successful-batch replay/idempotency coverage added (execution pending).
 
 ## MySQL / shared hosting
@@ -48,7 +49,7 @@
 
 ## Progress — 2026-09-12
 - [x] `web-hosting-sync` isolated; main/master untouched.
-- [x] Audit + secure API foundation completed.
+- [x] Audit + secure API foundation completed and API contract documented.
 - [x] Local Agent implemented: LAN reader, HTTPS client, durable queue/checkpoint, retry/idempotency, heartbeat, diagnostics.
 - [x] API idempotency coverage expanded.
 - [x] Windows automatic scheduled execution + uninstall helper and deployment README added.
