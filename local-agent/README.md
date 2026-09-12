@@ -5,9 +5,9 @@ Windows-first PHP CLI agent on the same LAN as ZKTeco. It sends attendance to ho
 ## Setup
 1. Hosted app: `php artisan attendance:agent-provision "Office Agent" zk-office-1`.
 2. Copy `config.example.json` to `config.json`, paste the one-time token and configure URL/device. This file is gitignored.
-3. Office PC: run `php local-agent/check-requirements.php`. It verifies PHP 8.1+, sockets, curl, pdo_sqlite and sqlite3.
-4. Ensure Composer dependencies are installed, then manually test `php local-agent/agent.php` on the ZKTeco LAN.
-5. After manual success, run `local-agent/install-task.ps1` in PowerShell with permission to create scheduled tasks. It runs every minute and prevents overlapping instances.
+3. Office PC: run `php local-agent/check-requirements.php`. It verifies PHP 8.1+, sockets, curl, pdo_sqlite, sqlite3 and Composer autoload.
+4. Manually test `php local-agent/agent.php` on the ZKTeco LAN.
+5. After manual success, run `local-agent/install-task.ps1` in PowerShell with permission to create scheduled tasks. The installer runs the requirements check again, schedules every minute, and prevents overlapping instances.
 6. `local-agent/uninstall-task.ps1` removes only the task and preserves local config/state.
 
 ## Behavior
