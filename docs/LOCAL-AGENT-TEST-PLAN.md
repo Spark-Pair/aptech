@@ -1,25 +1,27 @@
 # Local Agent End-to-End Test Plan
 
-Run this before disabling the legacy hosted ZKTeco path.
+Run before disabling legacy hosted ZKTeco access.
 
 ## Preconditions
-- Test/staging Laravel uses MySQL and HTTPS.
-- Agent provisioned with a dedicated test device identifier/token.
-- Office test PC is on same LAN as ZKTeco.
-- `config.json` is not committed.
+- Staging Laravel uses MySQL + HTTPS.
+- Dedicated test agent/device token provisioned.
+- Office PC is on same LAN as ZKTeco and `check-requirements.php` passes.
+- `config.json` remains uncommitted.
 
 ## Cases
-1. Manual heartbeat succeeds; web server records heartbeat.
-2. Device read succeeds and known employee punch reaches MySQL once.
-3. Re-run with no new punches: no duplicate attendance effect.
-4. Disconnect internet, create/read new punch, run agent: batch remains queued. Restore internet and verify queued batch is acknowledged exactly once.
-5. Stop/disable API temporarily: same queue/recovery behavior.
-6. Disconnect ZKTeco but keep internet: heartbeat remains possible, device read fails safely and existing hosted UI remains usable.
-7. Restart Windows with a queued batch: scheduled task later replays it successfully.
-8. Replay same server `batch_id`: API reports duplicate and does not create a second batch/import.
-9. Rotate token: old token rejected; updated local token succeeds.
-10. Set agent inactive: API returns unauthorized and no sync occurs.
-11. Verify local logs contain useful errors but no bearer token.
-12. Verify UI status transitions online/offline based on heartbeat without full-page refresh.
+1. Heartbeat succeeds and server records it.
+2. Device read succeeds; capture/anonymize the raw row keys/shape for compatibility verification.
+3. Known employee IN/OUT reaches MySQL once and produces expected attendance day.
+4. Re-run with no new punches: no duplicate effect.
+5. Create two legitimate punches as close together as practical; verify timestamp checkpoint does not skip same-time records. If device can backfill older rows, test that too. If unsafe, replace timestamp checkpoint with punch fingerprints/cursor before production.
+6. Disconnect internet: new batch stays queued; restore internet: acknowledged exactly once.
+7. Temporarily stop API: same queue/recovery behavior.
+8. Disconnect ZKTeco while internet works: heartbeat can succeed, read fails safely, hosted UI stays usable.
+9. Restart Windows with queued batch: scheduled task replays successfully.
+10. Replay same `batch_id`: API returns duplicate and does not re-import.
+11. Rotate token: old token rejected; new token succeeds.
+12. Inactivate agent: API rejects it.
+13. Verify logs are useful and contain no bearer token.
+14. Verify UI status online/offline transitions asynchronously without full-page refresh.
 
-Record test date, environment, device model/firmware if available, result, and any observed ZKTeco log row shape before production cutover.
+Record date, staging URL/environment, MySQL version, PHP version, ZKTeco model/firmware if available, observed row shape, each result and any corrective commit before cutover.
