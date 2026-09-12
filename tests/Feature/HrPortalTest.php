@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Attendance;
 use App\Models\Employee;
-use App\Models\Shift;
 use App\Models\User;
 use App\Services\ZKTecoService;
 use Carbon\Carbon;
@@ -81,7 +80,10 @@ class HrPortalTest extends TestCase
         Attendance::create(['empid' => 101, 'date' => '2026-09-02', 'status' => 'Absent']);
         $this->get('/employees?month=2026-09')->assertOk()->assertViewHas('employees', function ($rows) {
             $employee = $rows[0];
-            return $employee->attendance->count() === 2 && $employee->present_count === 1 && $employee->absent_count === 1;
+            return $employee->attendance->count() === 2
+                && $employee->present_days === 1
+                && $employee->absent_days === 1
+                && $employee->working_days === 2;
         });
     }
 
@@ -120,21 +122,25 @@ class HrPortalTest extends TestCase
     public function test_import_is_order_independent_and_repeat_safe(): void
     {
         $this->signIn(); $this->employee();
-        $csv = "id,timestamp,type\n101,2026-09-02 17:00:00,1\n101,2026-09-02 09:00:00,0\n101,2026-09-02 08:45:00,0\n101,2026-09-02 17:15:00,1\n";
+        $csv = "empid,timestamp,type\n101,2026-09-02 17:00:00,1\n101,2026-09-02 09:00:00,0\n101,2026-09-02 08:45:00,0\n101,2026-09-02 17:15:00,1\n";
         Storage::fake('local'); Storage::disk('local')->put('attendance.csv', $csv);
         $file = Storage::disk('local')->path('attendance.csv');
         $uploaded = new \Illuminate\Http\UploadedFile($file, 'attendance.csv', 'text/csv', null, true);
-        $this->post('/operations/import', ['file' => $uploaded])->assertRedirect();
+        $this->post('/operations/import', ['file' => $uploaded])->assertRedirect()->assertSessionHas('success');
         $row = Attendance::where(['empid'=>101,'date'=>'2026-09-02'])->firstOrFail();
         $this->assertSame('08:45', $row->check_in->format('H:i')); $this->assertSame('17:15', $row->check_out->format('H:i'));
+
+        $uploadedReplay = new \Illuminate\Http\UploadedFile($file, 'attendance.csv', 'text/csv', null, true);
+        $this->post('/operations/import', ['file' => $uploadedReplay])->assertRedirect()->assertSessionHas('success');
+        $this->assertDatabaseCount('attendances', 1);
     }
 
     public function test_csv_validation_is_atomic_and_rejects_invalid_dates(): void
     {
         $this->signIn(); $this->employee();
-        Storage::fake('local'); Storage::disk('local')->put('bad.csv', "id,timestamp,type\n101,2026-09-02 09:00:00,0\n101,not-a-date,1\n");
+        Storage::fake('local'); Storage::disk('local')->put('bad.csv', "empid,timestamp,type\n101,2026-09-02 09:00:00,0\n101,not-a-date,1\n");
         $uploaded = new \Illuminate\Http\UploadedFile(Storage::disk('local')->path('bad.csv'), 'bad.csv', 'text/csv', null, true);
-        $this->post('/operations/import', ['file'=>$uploaded])->assertSessionHasErrors();
+        $this->post('/operations/import', ['file'=>$uploaded])->assertSessionHasErrors('file');
         $this->assertDatabaseCount('attendances', 0);
     }
 
@@ -158,16 +164,21 @@ class HrPortalTest extends TestCase
 
     public function test_device_failure_is_recoverable_and_get_never_syncs(): void
     {
-        $this->signIn(); $mock=Mockery::mock(ZKTecoService::class); $mock->shouldReceive('connect')->once()->andReturn(false); $mock->shouldReceive('disconnect')->once(); $this->app->instance(ZKTecoService::class,$mock);
+        $this->signIn();
+        $mock=Mockery::mock(ZKTecoService::class);
+        $mock->shouldReceive('connect')->once()->andReturn(false);
+        $mock->shouldNotReceive('getAttendanceLogs');
+        $mock->shouldNotReceive('disconnect');
+        $this->app->instance(ZKTecoService::class,$mock);
         $this->post('/fetchLogs')->assertRedirect()->assertSessionHas('error');
         $this->get('/fetchLogs')->assertRedirect(route('operations.index'));
     }
 
     public function test_login_validation_and_logout(): void
     {
-        $user=User::factory()->create(['email'=>'login@example.com','password'=>Hash::make('password123')]);
-        $this->post('/login',['email'=>'login@example.com','password'=>'wrong'])->assertSessionHasErrors('email');
-        $this->post('/login',['email'=>'login@example.com','password'=>'password123'])->assertRedirect('/');
+        $user=User::factory()->create(['username'=>'login-user','email'=>'login@example.com','password'=>Hash::make('password123')]);
+        $this->post('/login',['username'=>'login-user','password'=>'wrong'])->assertSessionHasErrors('username');
+        $this->post('/login',['username'=>'login-user','password'=>'password123'])->assertRedirect('/');
         $this->actingAs($user)->post('/logout')->assertRedirect(route('login'));
     }
 
