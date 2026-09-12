@@ -13,32 +13,31 @@
 - [x] Versioned heartbeat/sync API, agent model, hashed revocable bearer credentials, device binding, validation/throttling.
 - [x] Server batch idempotency + acknowledgement + heartbeat/last-sync/error health fields.
 - [x] Existing `AttendanceImporter` remains authoritative hosted business logic.
-- [x] API contract documented in `docs/LOCAL-AGENT-API.md`.
-- [x] Initial API tests plus successful-batch replay/idempotency coverage added (execution pending).
+- [x] API contract documented; API auth/validation/idempotency test coverage added (runtime execution pending).
 
 ## MySQL / shared hosting
 - [~] Static compatibility audit positive; real MySQL execution required.
-- [x] MySQL clean-test/existing-data verification procedure documented in `docs/MYSQL-MIGRATION-CHECKLIST.md`.
+- [x] MySQL clean-test/existing-data verification checklist documented.
 - [ ] Clean migrate/seed on disposable MySQL; full CRUD/auth/HR/attendance/report regression.
-- [x] Hostinger deployment target documented in `docs/HOSTINGER-DEPLOYMENT.md`.
-- [ ] Verify target hosting PHP/extensions/document-root and staging MySQL/HTTPS.
-- [ ] Build actual SQLite -> MySQL importer only if real existing production data must be retained after inspecting source DB.
+- [x] Hostinger deployment target documented.
+- [ ] Verify actual Hostinger PHP/extensions/document-root and staging MySQL/HTTPS.
+- [ ] Build SQLite -> MySQL importer only if real production data must be retained, after inspecting source DB.
 
 ## Local Sync Agent
-- [x] Windows-first PHP CLI MVP, external gitignored config, configurable device/API parameters.
-- [x] ZKTeco sockets only on office PC; outbound HTTPS API only.
-- [x] Durable agent-only SQLite queue/checkpoint, UUID idempotency, capped exponential retries and pending replay.
-- [x] Heartbeat, acknowledged timestamp, safe rotating diagnostics.
-- [x] PowerShell Task Scheduler install/uninstall helpers with one-minute schedule and overlap prevention.
-- [x] Setup/security/recovery README.
-- [x] End-to-end outage/replay/restart/token-rotation test procedure documented in `docs/LOCAL-AGENT-TEST-PLAN.md`.
-- [ ] Execute test plan against physical ZKTeco and staging API/MySQL; record actual device response shape.
+- [x] Windows-first PHP CLI MVP; external gitignored config and configurable device/API parameters.
+- [x] ZKTeco sockets only on office PC; outbound HTTPS only.
+- [x] Durable agent-only SQLite queue/checkpoint, UUID idempotency, capped retries/pending replay.
+- [x] Heartbeat, safe rotating diagnostics and acknowledged timestamp.
+- [x] Windows Task Scheduler install/uninstall helpers.
+- [x] Agent prerequisite checker for PHP 8.1+, sockets, curl, pdo_sqlite and sqlite3.
+- [x] Setup/security/recovery guide and end-to-end failure/replay test plan.
+- [ ] Execute physical ZKTeco test plan and record actual response shape.
 - [ ] Refine non-technical installer after real-device test.
 
 ## UI/status
 - [x] Existing AJAX layer retained; no SPA rewrite.
-- [x] Reusable server status controller calculates active/online from heartbeat and returns heartbeat/sync/error fields.
-- [ ] Wire status controller into authenticated existing web UI and poll asynchronously without changing visual language.
+- [x] Server status controller prepared for active/online/heartbeat/sync/error data.
+- [ ] Wire it into authenticated existing UI and asynchronous polling without redesign.
 
 ## Cutover/testing
 - [ ] Execute full automated suite in checked-out runtime.
@@ -50,11 +49,10 @@
 ## Progress — 2026-09-12
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
-- [x] Agent diagnostics, Windows scheduling helpers, API contract, MySQL checklist, Hostinger guide and end-to-end recovery test plan added.
-- [x] API idempotency coverage expanded.
-- [x] Server-side agent status logic added for upcoming AJAX UI integration.
-- [x] Legacy hosted ZKTeco path intentionally preserved for staged migration.
-- [~] Next: authenticated device/sync status UI. Runtime MySQL/Hostinger + physical ZKTeco verification remain environment-dependent.
+- [x] Agent diagnostics, Windows scheduling, prerequisite checker, API contract, MySQL checklist, Hostinger guide and recovery test plan added.
+- [x] Server-side agent status logic prepared.
+- [x] Legacy hosted ZKTeco path intentionally preserved.
+- [~] Next: authenticated device/sync status UI. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent.
 
 ## Target
 ```text
