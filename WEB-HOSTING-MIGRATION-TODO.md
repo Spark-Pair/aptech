@@ -28,10 +28,11 @@
 - [x] Durable agent-only SQLite queue/checkpoint; UUID batches; server idempotency; capped exponential retries.
 - [x] Heartbeat, acknowledged timestamp and pending replay before new reads.
 - [x] Safe rotating local diagnostics with bearer-like secret redaction.
-- [x] Added PowerShell Windows Task Scheduler installer; runs every minute, starts missed tasks, prevents overlapping instances.
+- [x] PowerShell Task Scheduler install/uninstall helpers; one-minute schedule, missed-start recovery and overlap prevention.
+- [x] Setup/security/recovery instructions documented in `local-agent/README.md`.
 - [ ] Verify actual ZKTeco response shape against normalizer.
 - [ ] Test internet/API/device loss, duplicate replay and PC restart recovery.
-- [ ] Refine non-technical installation/configuration after real-device test.
+- [ ] Refine non-technical installer after real-device test.
 
 ## UI/status
 - [x] Existing AJAX layer retained; no SPA rewrite.
@@ -50,7 +51,7 @@
 - [x] Audit + secure API foundation completed.
 - [x] Local Agent implemented: LAN reader, HTTPS client, durable queue/checkpoint, retry/idempotency, heartbeat, diagnostics.
 - [x] API idempotency coverage expanded.
-- [x] Windows Task Scheduler installer added for automatic one-minute execution without a permanent service process.
+- [x] Windows automatic scheduled execution + uninstall helper and deployment README added.
 - [x] Legacy hosted ZKTeco path intentionally preserved for staged migration.
 - [~] Next: device/sync status UI. MySQL/Hostinger + physical ZKTeco verification require corresponding environments.
 
