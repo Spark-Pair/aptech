@@ -7,17 +7,17 @@ Windows-first PHP CLI agent on the same LAN as ZKTeco. It sends attendance to ho
 2. Copy `config.example.json` to `config.json`, paste the one-time token and configure URL/device. This file is gitignored.
 3. Office PC: run `php local-agent/check-requirements.php`. It verifies PHP 8.1+, sockets, curl, pdo_sqlite, sqlite3 and Composer autoload.
 4. Manually test `php local-agent/agent.php` on the ZKTeco LAN.
-5. After manual success, run `local-agent/install-task.ps1` in PowerShell with permission to create scheduled tasks. The installer runs the requirements check again, schedules every minute, and prevents overlapping instances.
+5. After manual success, run `local-agent/install-task.ps1` in PowerShell with permission to create scheduled tasks. It rechecks requirements, runs every minute, prevents overlap and caps one run at five minutes.
 6. `local-agent/uninstall-task.ps1` removes only the task and preserves local config/state.
 
 ## Behavior
 - Local ZKTeco port 4370 read; no public port forwarding.
 - Outbound HTTPS `/api/v1/attendance-agent/*` only.
-- Durable unsent queue, capped exponential retry, stable UUID idempotency, acknowledged timestamp checkpoint.
+- Durable unsent queue, capped exponential retry, stable UUID transport idempotency, acknowledged timestamp checkpoint.
 - Heartbeat plus rotating diagnostics under `local-agent/logs/`.
 
 ## Security
 Never expose port 4370 publicly. Never commit `config.json`, `state.sqlite` or logs. Rotate a token by provisioning the same device identifier again and updating local config.
 
 ## Staged migration
-The legacy hosted ZKTeco path stays until physical-device + API + MySQL end-to-end tests pass. The timestamp checkpoint is provisional until the physical device is checked for same-timestamp or delayed/backfilled rows; see `docs/IMPLEMENTATION-NOTES.md`.
+The legacy hosted ZKTeco path stays until physical-device + API + MySQL end-to-end tests pass. Timestamp checkpoint/device-log identity is provisional until same-timestamp or delayed/backfilled rows are tested; see `docs/IMPLEMENTATION-NOTES.md` and `docs/LOCAL-AGENT-TEST-PLAN.md`.
