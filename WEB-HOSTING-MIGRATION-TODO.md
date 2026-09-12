@@ -18,9 +18,11 @@
 
 ## MySQL / shared hosting
 - [~] Static compatibility audit positive; real MySQL execution required.
-- [ ] Clean migrate/seed on MySQL; full CRUD/auth/HR/attendance/report regression.
+- [x] MySQL clean-test and existing-data migration verification procedure documented in `docs/MYSQL-MIGRATION-CHECKLIST.md`.
+- [ ] Clean migrate/seed on disposable MySQL; full CRUD/auth/HR/attendance/report regression.
 - [x] Hostinger deployment target documented in `docs/HOSTINGER-DEPLOYMENT.md`.
 - [ ] Verify target hosting PHP/extensions/document-root and staging MySQL/HTTPS.
+- [ ] Build an actual SQLite -> MySQL data importer only if real existing production data must be retained and after inspecting that source DB.
 
 ## Local Sync Agent
 - [x] Windows-first PHP CLI MVP, external gitignored config, configurable device/API parameters.
@@ -48,11 +50,11 @@
 ## Progress — 2026-09-12
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
-- [x] Agent diagnostics, automatic Windows scheduling helpers, API contract and Hostinger deployment guide added.
+- [x] Agent diagnostics, automatic Windows scheduling helpers, API contract, MySQL migration checklist and Hostinger deployment guide added.
 - [x] API idempotency coverage expanded.
-- [x] Server-side agent status endpoint logic added for upcoming AJAX UI integration.
+- [x] Server-side agent status logic added for upcoming AJAX UI integration.
 - [x] Legacy hosted ZKTeco path intentionally preserved for staged migration.
-- [~] Next: connect agent status to authenticated existing UI, then runtime/environment verification.
+- [~] Next: authenticated device/sync status UI. Runtime MySQL/Hostinger + physical ZKTeco verification remain environment-dependent.
 
 ## Target
 ```text
