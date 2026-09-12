@@ -46,9 +46,9 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [ ] Runtime-test authenticated/unauthenticated status behavior and AJAX navigation/poll lifecycle in browser.
 
 ## Cutover/testing
-- [~] Second Windows runtime suite: 17 passed, 2 failed, 1 skipped, 99 assertions. Employee create/update regression is now fixed. Remaining two failures are both legacy employee detail GET expecting 200 while controller redirected to the AJAX index/detail state; controller changed to render the same existing employees index/detail view directly for route/test compatibility. Re-run required.
-- [x] Attendance Agent API runtime checks passed for missing token, active heartbeat, inactive agent rejection, wrong device rejection and bounded log validation.
-- [~] Successful sync replay/idempotency test now has an explicit employee fixture using machine `empid` 101 and asserts one sync batch plus imported attendance; runtime re-run required.
+- [~] Third Windows runtime suite: 19 passed, 1 failed, 0 skipped, 121 assertions. Attendance Agent idempotency now executes and passes. The sole failure is a stale HTML-shape assertion expecting Early/Late totals as adjacent `<td>` cells, while the unchanged current UI correctly renders totals in infobox cards. Test updated to assert `selectedSummary` values and the current infobox output; re-run required.
+- [x] Attendance Agent API runtime checks pass, including successful batch replay/idempotency.
+- [x] Successful sync replay/idempotency test has explicit employee fixture, uses machine `empid`, verifies one sync batch and imported attendance.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
 - [ ] UI regression and async stale-data checks.
 - [x] Staged-cutover rule documented: Local Agent existence alone never removes legacy direct-device code.
@@ -61,11 +61,11 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan, result log and docs index added.
 - [x] Local Sync Agent status wired into existing Operations UI through authenticated endpoint and 30-second AJAX polling.
 - [x] First runtime: 16 passed, 3 failed, 1 skipped. Employee edit/update routes and unique validation fixed.
-- [x] Second runtime: 17 passed, 2 failed, 1 skipped. Both remaining failures isolated to employee detail GET redirect semantics.
-- [x] Employee detail GET now renders the existing employees index/detail view with the selected employee and monthly attendance instead of returning a redirect; UI design remains unchanged.
-- [x] Attendance Agent idempotency test no longer depends on external seeded data; explicit employee fixture added and machine `empid` used in device logs.
+- [x] Second runtime: 17 passed, 2 failed, 1 skipped. Employee detail route fixed and explicit idempotency fixture added.
+- [x] Third runtime: 19 passed, 1 failed, 0 skipped. All functional/API tests now execute; remaining failure is only an outdated presentation assertion. Runtime output itself confirms Early Min 25 and Late Min 12 are correctly rendered in the current UI.
+- [x] Updated monthly totals test to validate the view data plus current infobox markup instead of obsolete adjacent-table-cell markup; production UI code was not changed for this assertion fix.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: pull latest `web-hosting-sync`, clear caches and rerun `php artisan test`. Target is zero failures and zero skips; then proceed to clean disposable MySQL verification.
+- [~] Next: pull latest `web-hosting-sync`, clear caches and rerun `php artisan test`. Target zero failures/zero skips. Then proceed immediately to disposable MySQL verification.
 
 ## Target
 ```text
