@@ -15,7 +15,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Versioned heartbeat/sync API, agent model, hashed revocable bearer credentials, device binding, validation/throttling.
 - [x] Server transport batch idempotency + acknowledgement + heartbeat/last-sync/error health fields.
 - [x] Existing `AttendanceImporter` remains authoritative hosted business logic.
-- [x] API/security contract documented; auth/validation/idempotency test coverage added (runtime execution pending).
+- [x] API/security contract documented; auth/validation/idempotency test coverage added.
 
 ## MySQL / shared hosting
 - [~] Static compatibility audit positive; real MySQL execution required.
@@ -46,7 +46,9 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [ ] Runtime-test authenticated/unauthenticated status behavior and AJAX navigation/poll lifecycle in browser.
 
 ## Cutover/testing
-- [ ] Execute full automated suite in checked-out runtime.
+- [~] First automated runtime suite executed on Windows: 16 passed, 3 failed, 1 skipped, 95 assertions. Failures traced to employee edit/update routing and update unique validation; fixes committed. Re-run required.
+- [x] Attendance Agent API runtime checks passed for missing token, active heartbeat, inactive agent rejection, wrong device rejection and bounded log validation.
+- [~] Successful sync replay/idempotency test is still skipped because its employee/import fixture is not yet implemented.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
 - [ ] UI regression and async stale-data checks.
 - [x] Staged-cutover rule documented: Local Agent existence alone never removes legacy direct-device code.
@@ -57,10 +59,12 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
 - [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan, result log and docs index added.
-- [x] Local Sync Agent status is now wired into the existing Operations UI through an authenticated status endpoint and 30-second AJAX polling; no full-page refresh or redesign introduced.
-- [x] Device-cursor risk separated from transport idempotency; staged-cutover rule recorded.
+- [x] Local Sync Agent status wired into existing Operations UI through authenticated endpoint and 30-second AJAX polling.
+- [x] First real `php artisan test` run received: dependencies/autoload/cache clear succeeded; 16 tests passed, 3 failed, 1 skipped.
+- [x] Fixed missing employee `edit`/`update` resource routes that caused the two 302 failures.
+- [x] Fixed employee update validation so unchanged username correctly ignores the current employee and immutable `empid` remains prohibited on update.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next environment-dependent gates: execute automated/runtime tests, clean MySQL verification, Hostinger staging verification, and physical ZKTeco Agent -> API -> MySQL test. Record real results before any cutover.
+- [~] Next: pull latest `web-hosting-sync` and rerun `php artisan test`. If green except the intentional idempotency skip, implement that fixture/test, then move to clean MySQL verification.
 
 ## Target
 ```text
