@@ -15,7 +15,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Versioned heartbeat/sync API, agent model, hashed revocable bearer credentials, device binding, validation/throttling.
 - [x] Server batch idempotency + acknowledgement + heartbeat/last-sync/error health fields.
 - [x] Existing `AttendanceImporter` remains authoritative hosted business logic.
-- [x] API contract documented; API auth/validation/idempotency test coverage added (runtime execution pending).
+- [x] API contract and security controls documented; API auth/validation/idempotency test coverage added (runtime execution pending).
 
 ## MySQL / shared hosting
 - [~] Static compatibility audit positive; real MySQL execution required.
@@ -30,10 +30,10 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] ZKTeco sockets only on office PC; outbound HTTPS only.
 - [x] Durable agent-only SQLite queue/checkpoint, UUID idempotency, capped retries/pending replay.
 - [x] Heartbeat, safe rotating diagnostics and acknowledged timestamp.
-- [x] Windows Task Scheduler install/uninstall helpers; prerequisite-gated install, overlap prevention and five-minute execution ceiling.
+- [x] Windows Task Scheduler install/uninstall helpers; prerequisite gate, overlap prevention, execution ceiling.
 - [x] Prerequisite checker validates PHP 8.1+, sockets, curl, pdo_sqlite, sqlite3 and Composer autoload.
 - [x] Setup/security/recovery guide + expanded physical failure/replay/checkpoint test plan.
-- [~] Timestamp checkpoint provisional until same-timestamp/backfill behavior verified; edge case explicitly tested in plan.
+- [~] Timestamp checkpoint provisional until same-timestamp/backfill behavior verified.
 - [ ] Execute physical ZKTeco test plan and record actual response shape.
 - [ ] Refine non-technical installer after real-device test.
 
@@ -48,12 +48,12 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
 - [ ] UI regression and async stale-data checks.
 - [ ] Only after replacement proves stable, disable/remove hosted ZKTeco socket/private-LAN dependency.
-- [ ] Security review, backup/rollback, explicit approval, then merge.
+- [ ] Final security review, backup/rollback, explicit approval, then merge.
 
 ## Progress — 2026-09-12
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
-- [x] Agent diagnostics, hardened Windows scheduling, prerequisite checker/gate, API contract, MySQL checklist, Hostinger guide, recovery/checkpoint test plan and docs index added.
+- [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan and docs index added.
 - [x] Server-side status logic + safe UI integration plan prepared.
 - [x] Timestamp checkpoint risk explicitly tracked and added to physical tests.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
