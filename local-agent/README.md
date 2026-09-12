@@ -1,31 +1,23 @@
 # Local Attendance Sync Agent
 
-Windows-first PHP CLI agent that runs on the same LAN as the ZKTeco device and sends attendance to the hosted Laravel API over outbound HTTPS.
-
-The agent's SQLite file is only a local durable queue/checkpoint. The production Laravel application uses MySQL.
+Windows-first PHP CLI agent on the same LAN as ZKTeco. It sends attendance to hosted Laravel over outbound HTTPS. Agent SQLite is only a durable local queue/checkpoint; production Laravel uses MySQL.
 
 ## Setup
-
-1. On the hosted Laravel app, run `php artisan attendance:agent-provision "Office Agent" zk-office-1`.
-2. Copy `config.example.json` to `config.json` and paste the one-time token plus hosted URL/device settings. `config.json` is gitignored.
-3. On the office PC, ensure PHP CLI has `sockets`, `curl`, `pdo_sqlite` and `sqlite3` available and Composer dependencies are installed.
-4. Test manually with `php local-agent/agent.php` while connected to the same LAN as the ZKTeco device.
-5. After the manual test succeeds, run PowerShell as an account allowed to create scheduled tasks and execute `local-agent/install-task.ps1`. It schedules a one-cycle sync every minute and prevents overlapping instances.
-6. To remove only the scheduled task, run `local-agent/uninstall-task.ps1`. Local config/state is intentionally retained.
+1. Hosted app: `php artisan attendance:agent-provision "Office Agent" zk-office-1`.
+2. Copy `config.example.json` to `config.json`, paste the one-time token and configure URL/device. This file is gitignored.
+3. Office PC: run `php local-agent/check-requirements.php`. It verifies PHP 8.1+, sockets, curl, pdo_sqlite and sqlite3.
+4. Ensure Composer dependencies are installed, then manually test `php local-agent/agent.php` on the ZKTeco LAN.
+5. After manual success, run `local-agent/install-task.ps1` in PowerShell with permission to create scheduled tasks. It runs every minute and prevents overlapping instances.
+6. `local-agent/uninstall-task.ps1` removes only the task and preserves local config/state.
 
 ## Behavior
-
-- Reads ZKTeco locally through port 4370.
-- Sends only outbound HTTPS requests to `/api/v1/attendance-agent/*`.
-- Queues unsent batches in local SQLite and retries with capped exponential backoff.
-- Uses stable UUID batch IDs so server replay is idempotent.
-- Saves the last server-acknowledged attendance timestamp as its checkpoint.
-- Sends a heartbeat and writes rotating diagnostics to `local-agent/logs/`.
+- Local ZKTeco port 4370 read; no public port forwarding.
+- Outbound HTTPS `/api/v1/attendance-agent/*` only.
+- Durable unsent queue, capped exponential retry, stable UUID idempotency, acknowledged timestamp checkpoint.
+- Heartbeat plus rotating diagnostics under `local-agent/logs/`.
 
 ## Security
+Never expose port 4370 publicly. Never commit `config.json`, `state.sqlite` or logs. Rotate a token by provisioning the same device identifier again and updating local config.
 
-Never expose ZKTeco port 4370 to the public internet. Never commit `config.json`, `state.sqlite`, or logs. The hosted token can be rotated by running the provisioning command again for the same `device_identifier` and updating the local config.
-
-## Current staged-migration note
-
-The old hosted ZKTeco path remains available until this agent is verified with the physical device, API and MySQL. It must not be removed before end-to-end verification.
+## Staged migration
+The legacy hosted ZKTeco path stays until physical-device + API + MySQL end-to-end tests pass.
