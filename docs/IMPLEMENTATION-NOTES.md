@@ -1,7 +1,9 @@
 # Implementation Notes
 
-## 2026-09-12 Local Agent checkpoint strategy
+## 2026-09-12 — Device checkpoint identity
+The MVP checkpoints by greatest server-acknowledged device timestamp. Physical testing must confirm whether the target ZKTeco emits multiple legitimate records with the same timestamp or later exposes delayed/backfilled records older than the checkpoint. If so, replace timestamp-only filtering with a durable per-punch fingerprint/cursor before production cutover.
 
-The MVP currently checkpoints by the greatest server-acknowledged device timestamp. This is simple and prevents repeated upload of old logs. During physical-device testing we must confirm whether the target ZKTeco can emit multiple legitimate records with the exact same timestamp or later expose delayed/backfilled records older than the checkpoint. If either behavior occurs, replace timestamp-only filtering with a durable per-punch fingerprint/cursor strategy before production cutover.
+Server `(agent, batch_id)` idempotency protects transport retries only; it is separate from physical device-log identity.
 
-Server-side `(agent, batch_id)` idempotency already protects transport retries, but it is intentionally separate from device-log identity. Do not mark physical-device duplicate safety fully verified until this edge case is tested.
+## 2026-09-12 — Staged cutover
+Do not remove current hosted/direct ZKTeco code merely because Local Agent code exists. Cutover requires staging MySQL, automated tests, real-device row-shape verification, outage/retry/restart tests, status UI regression and explicit approval.
