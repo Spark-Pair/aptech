@@ -46,7 +46,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Status is fetched once when Operations is loaded/entered through AJAX; continuous browser polling is intentionally disabled to avoid unnecessary shared-hosting traffic.
 - [x] Existing portal AJAX layer escapes server status values and reloads status when Operations is entered through AJAX navigation.
 - [x] Server-side runtime coverage verifies status auth, Operations status hook, online/offline health, error fields and token-hash non-disclosure on SQLite and MySQL.
-- [ ] Browser-test AJAX navigation and visual status updates with the on-demand status fetch.
+- [x] Browser verification passed: no background status request repeats while remaining on Operations; navigating away and back through AJAX triggers exactly one fresh status request.
 
 ## Cutover/testing
 - [x] Windows SQLite regression is deterministic after throttle-isolation fix: two consecutive runs each passed 22 tests / 119 assertions on 2026-09-12 (12.36s and 11.13s).
@@ -54,7 +54,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Attendance Agent API runtime checks pass, including successful batch replay/idempotency.
 - [x] Successful sync replay/idempotency test has explicit employee fixture, uses machine `empid`, verifies one sync batch and imported attendance.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
-- [~] UI regression: server-side status/auth/status-hook coverage passes; browser AJAX navigation/on-demand status refresh remains.
+- [x] UI regression for Local Sync Agent status: server-side coverage plus browser on-demand/AJAX navigation behavior passed; continuous polling absent.
 - [x] Staged-cutover rule documented: Local Agent existence alone never removes legacy direct-device code.
 - [ ] Only after replacement proves stable, disable/remove hosted ZKTeco socket/private-LAN dependency.
 - [ ] Final security review, backup/rollback, explicit approval, then merge.
@@ -75,8 +75,9 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Test base disables only Laravel `ThrottleRequests` middleware during automated functional tests; production route throttles remain configured and unchanged.
 - [x] Post-fix SQLite verification completed twice consecutively: both runs 22/22 tests, 119 assertions.
 - [x] Post-fix MySQL 8.0.46 verification completed: 22/22 tests, 119 assertions using `phpunit.mysql.xml`.
+- [x] Browser on-demand status verification completed: no automatic repeat while idle; one fresh request when returning to Operations through AJAX navigation.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: finish browser verification of on-demand status (one request on Operations entry, no background polling), then proceed to actual Hostinger staging PHP/extensions/document-root/MySQL/HTTPS verification before physical ZKTeco end-to-end cutover testing.
+- [~] Next: actual Hostinger staging PHP/extensions/document-root/MySQL/HTTPS verification, then physical ZKTeco end-to-end cutover testing.
 
 ## Target
 ```text
