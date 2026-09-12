@@ -20,7 +20,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 ## MySQL / shared hosting
 - [x] Static compatibility audit confirmed by real MySQL 8.0.46 execution on disposable `aptech_test` database.
 - [x] MySQL clean-test/existing-data verification checklist documented and linked to result logging.
-- [x] Clean migrate/seed on disposable MySQL completed; full automated CRUD/auth/HR/attendance/report regression passes: 20 tests, 104 assertions.
+- [x] Clean migrate/seed on disposable MySQL completed; expanded automated CRUD/auth/HR/attendance/report/status regression passes: 22 tests, 119 assertions.
 - [x] Dedicated `phpunit.mysql.xml` keeps the existing SQLite test configuration intact and targets the disposable MySQL test database without storing its password.
 - [x] Hostinger deployment/update/rollback target documented.
 - [ ] Verify actual Hostinger PHP/extensions/document-root and staging MySQL/HTTPS.
@@ -44,15 +44,16 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Authenticated status route is inside the existing `auth` route group and separately throttled.
 - [x] Operations page has a no-redesign Local Sync Agent status region while legacy direct-device action remains available during staged migration.
 - [x] Existing portal AJAX layer polls status asynchronously every 30 seconds, escapes server values, survives AJAX navigation and stops polling when the status region leaves the DOM.
-- [ ] Runtime-test authenticated/unauthenticated status behavior and AJAX navigation/poll lifecycle in browser.
+- [x] Server-side runtime coverage verifies status auth, Operations polling hook, online/offline health, error fields and token-hash non-disclosure on SQLite and MySQL.
+- [ ] Browser-test AJAX navigation/poll lifecycle and visual status updates.
 
 ## Cutover/testing
-- [x] Windows SQLite regression suite is green: 20 passed, 0 failed, 0 skipped, 104 assertions on 2026-09-12 after aligning stale tests with actual application contracts.
-- [x] Windows MySQL 8.0.46 regression suite is green on disposable `aptech_test`: 20 tests, 104 assertions on 2026-09-12.
+- [x] Windows SQLite regression suite is green: 22 passed, 0 failed, 0 skipped, 119 assertions on 2026-09-12.
+- [x] Windows MySQL 8.0.46 regression suite is green on disposable `aptech_test`: 22 tests, 119 assertions on 2026-09-12.
 - [x] Attendance Agent API runtime checks pass, including successful batch replay/idempotency.
 - [x] Successful sync replay/idempotency test has explicit employee fixture, uses machine `empid`, verifies one sync batch and imported attendance.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
-- [ ] UI regression and async stale-data checks.
+- [~] UI regression: server-side status/auth/polling-hook coverage passes; browser AJAX navigation/poll lifecycle remains.
 - [x] Staged-cutover rule documented: Local Agent existence alone never removes legacy direct-device code.
 - [ ] Only after replacement proves stable, disable/remove hosted ZKTeco socket/private-LAN dependency.
 - [ ] Final security review, backup/rollback, explicit approval, then merge.
@@ -64,13 +65,14 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Local Sync Agent status wired into existing Operations UI through authenticated endpoint and 30-second AJAX polling.
 - [x] Attendance Agent API/idempotency runtime coverage passes.
 - [x] Employee detail and monthly Early/Late presentation regression coverage aligned with current UI without redesigning production views.
-- [x] Fourth runtime exposed four stale HR test assumptions. Each was checked against production source contracts before changing tests.
-- [x] HR tests now use report aliases `present_days`/`absent_days`/`working_days`, the documented CSV `empid` header, username login, and correct failed-connect cleanup semantics. Import test also explicitly replays the same valid CSV and asserts a single attendance row.
-- [x] Fifth Windows SQLite runtime is fully green: 20 tests passed, 104 assertions, no failures and no skipped tests.
+- [x] HR tests use report aliases `present_days`/`absent_days`/`working_days`, documented CSV `empid` header, username login, and correct failed-connect cleanup semantics; repeat import asserts a single attendance row.
 - [x] Disposable MySQL 8.0.46 connection verified through PDO/Laravel; all nine migrations and seeding completed cleanly (`users=1`, no seeded employees/shifts/attendances).
-- [x] Dedicated MySQL PHPUnit configuration added; direct PHPUnit execution with `APP_ENV=testing` and `DB_DATABASE=aptech_test` is fully green: 20 tests, 104 assertions, 5.903s.
+- [x] Dedicated MySQL PHPUnit configuration added; it does not store the database password.
+- [x] Expanded status regression added: unauthenticated access, Operations polling hook, online/offline calculation, health/error payload and token-hash non-disclosure.
+- [x] Windows SQLite runtime after status coverage: 22 tests passed, 119 assertions, 5.13s.
+- [x] Windows MySQL 8.0.46 runtime after status coverage: 22 tests passed, 119 assertions, 5.050s using `phpunit.mysql.xml`.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: browser/UI regression and async status-poll lifecycle checks, then actual Hostinger staging PHP/extensions/MySQL/HTTPS verification before physical ZKTeco end-to-end cutover testing.
+- [~] Next: manual browser AJAX navigation/status-poll lifecycle verification, then actual Hostinger staging PHP/extensions/MySQL/HTTPS verification before physical ZKTeco end-to-end cutover testing.
 
 ## Target
 ```text
