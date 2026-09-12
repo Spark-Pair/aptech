@@ -1,19 +1,19 @@
 # MySQL Migration Verification Checklist
 
-Production Laravel must use MySQL. SQLite may remain for local tests/development and the Local Agent's private retry queue only.
+Production Laravel uses MySQL. SQLite may remain for local development/tests and Local Agent private queue only.
 
-## Empty database verification
-1. Create a disposable MySQL database.
-2. Configure `.env` with `DB_CONNECTION=mysql` and its credentials.
-3. Run `php artisan optimize:clear`.
-4. Run `php artisan migrate:fresh --seed` only on the disposable test database.
-5. Run `php artisan test`.
-6. Exercise login, employees, shifts, attendance import/reporting and AJAX forms/navigation.
+## Disposable DB
+1. Create disposable MySQL DB and set `.env` to `DB_CONNECTION=mysql`.
+2. `php artisan optimize:clear`.
+3. On disposable DB only: `php artisan migrate:fresh --seed`.
+4. `php artisan test`.
+5. Exercise login, employees, shifts, attendance import/reporting and AJAX forms/navigation.
+6. Record actual results in `docs/PHYSICAL-TEST-RESULTS.md` (or a linked staging result entry).
 
 ## Existing SQLite data
-Do not copy the SQLite file into production and do not convert it blindly. Before migration, take an immutable backup, count records per business table, export/transform in dependency order, import into an empty migrated MySQL schema, then compare counts and key totals/dates. Preserve IDs where relationships depend on them. Re-run application-level validation/report checks after import.
+Never copy SQLite file as production DB or blindly convert it. Take immutable backup, inventory/count business tables, migrate into an empty Laravel-created MySQL schema in dependency order, preserve IDs where relationships require them, compare counts/key totals/dates, then run application/report checks.
 
-A dedicated importer should be written only after the actual source SQLite data that must be retained is confirmed; production migration should not assume seed/demo data equals real data.
+Write a dedicated importer only after confirming the actual SQLite source data that must be retained. Do not assume demo/seed data represents production.
 
-## Seeder warning
-The current seeder must be reviewed against production-user policy before it is used on production. Seeding is for controlled setup/testing unless explicitly approved.
+## Seeder
+Review current seeder against production-user policy before any production run. Seeding is controlled setup/testing unless explicitly approved.
