@@ -14,8 +14,13 @@
 <button type="submit" class="btn btn-info"><i aria-hidden="true" class="fa fa-upload"></i> Import Attendance</button>
 </form>
 </div></div></div></div>
-<div class="col-md-6"><div class="widget-box"><div class="widget-header"><h4 class="widget-title"><i aria-hidden="true" class="fa fa-exchange"></i> Fetch Data From Device</h4></div><div class="widget-body"><div class="widget-main">
-<p>Sync attendance punches from the configured ZKTeco device.</p><p class="help-block">The device must be reachable on your network. Logs remain on the device after a successful sync.</p>
+<div class="col-md-6">
+<div class="widget-box" data-attendance-agent-status data-status-url="{{ route('attendance-agent.status') }}"><div class="widget-header"><h4 class="widget-title"><i aria-hidden="true" class="fa fa-exchange"></i> Attendance Device Sync</h4></div><div class="widget-body"><div class="widget-main">
+<div data-agent-status-content><p class="help-block"><i aria-hidden="true" class="fa fa-circle-o-notch fa-spin"></i> Checking Local Sync Agent status...</p></div>
+<p class="help-block">Attendance is designed to sync from the device through the Local Sync Agent without requiring the web server to access the office network.</p>
+</div></div></div>
+<div class="widget-box"><div class="widget-header"><h4 class="widget-title"><i aria-hidden="true" class="fa fa-exchange"></i> Fetch Data From Device</h4></div><div class="widget-body"><div class="widget-main">
+<p>Sync attendance punches from the configured ZKTeco device.</p><p class="help-block">Legacy direct-device sync remains available during migration testing and will only be removed after Local Sync Agent verification.</p>
 <form method="post" action="{{ route('attendance.sync') }}">@csrf<button type="submit" class="btn btn-success"><i aria-hidden="true" class="fa fa-refresh"></i> Fetch Attendance Logs</button></form>
 </div></div></div>
 <div class="widget-box" id="generate"><div class="widget-header"><h4 class="widget-title"><i aria-hidden="true" class="fa fa-calendar"></i> Generate Attendance</h4></div><div class="widget-body"><div class="widget-main">
