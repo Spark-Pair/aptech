@@ -43,9 +43,10 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Server status controller provides active/online/heartbeat/sync/error data.
 - [x] Authenticated status route is inside the existing `auth` route group and separately throttled.
 - [x] Operations page has a no-redesign Local Sync Agent status region while legacy direct-device action remains available during staged migration.
-- [x] Existing portal AJAX layer polls status asynchronously every 30 seconds, escapes server values, survives AJAX navigation and stops polling when the status region leaves the DOM.
-- [x] Server-side runtime coverage verifies status auth, Operations polling hook, online/offline health, error fields and token-hash non-disclosure on SQLite and MySQL.
-- [ ] Browser-test AJAX navigation/poll lifecycle and visual status updates.
+- [x] Status is fetched once when Operations is loaded/entered through AJAX; continuous browser polling is intentionally disabled to avoid unnecessary shared-hosting traffic.
+- [x] Existing portal AJAX layer escapes server status values and reloads status when Operations is entered through AJAX navigation.
+- [x] Server-side runtime coverage verifies status auth, Operations status hook, online/offline health, error fields and token-hash non-disclosure on SQLite and MySQL.
+- [ ] Browser-test AJAX navigation and visual status updates with the on-demand status fetch.
 
 ## Cutover/testing
 - [x] Windows SQLite regression suite is green: 22 passed, 0 failed, 0 skipped, 119 assertions on 2026-09-12.
@@ -53,7 +54,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Attendance Agent API runtime checks pass, including successful batch replay/idempotency.
 - [x] Successful sync replay/idempotency test has explicit employee fixture, uses machine `empid`, verifies one sync batch and imported attendance.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
-- [~] UI regression: server-side status/auth/polling-hook coverage passes; browser AJAX navigation/poll lifecycle remains.
+- [~] UI regression: server-side status/auth/status-hook coverage passes; browser AJAX navigation/on-demand status refresh remains.
 - [x] Staged-cutover rule documented: Local Agent existence alone never removes legacy direct-device code.
 - [ ] Only after replacement proves stable, disable/remove hosted ZKTeco socket/private-LAN dependency.
 - [ ] Final security review, backup/rollback, explicit approval, then merge.
@@ -62,17 +63,19 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
 - [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan, result log and docs index added.
-- [x] Local Sync Agent status wired into existing Operations UI through authenticated endpoint and 30-second AJAX polling.
+- [x] Local Sync Agent status wired into existing Operations UI through authenticated endpoint.
 - [x] Attendance Agent API/idempotency runtime coverage passes.
 - [x] Employee detail and monthly Early/Late presentation regression coverage aligned with current UI without redesigning production views.
 - [x] HR tests use report aliases `present_days`/`absent_days`/`working_days`, documented CSV `empid` header, username login, and correct failed-connect cleanup semantics; repeat import asserts a single attendance row.
 - [x] Disposable MySQL 8.0.46 connection verified through PDO/Laravel; all nine migrations and seeding completed cleanly (`users=1`, no seeded employees/shifts/attendances).
 - [x] Dedicated MySQL PHPUnit configuration added; it does not store the database password.
-- [x] Expanded status regression added: unauthenticated access, Operations polling hook, online/offline calculation, health/error payload and token-hash non-disclosure.
+- [x] Expanded status regression added: unauthenticated access, Operations status hook, online/offline calculation, health/error payload and token-hash non-disclosure.
 - [x] Windows SQLite runtime after status coverage: 22 tests passed, 119 assertions, 5.13s.
 - [x] Windows MySQL 8.0.46 runtime after status coverage: 22 tests passed, 119 assertions, 5.050s using `phpunit.mysql.xml`.
+- [x] Browser confirmed initial Operations status request returns HTTP 200 and renders the no-agent state.
+- [x] User rejected continuous browser polling for shared-hosting load; 30-second timer removed. Status now fetches only when Operations loads/is entered.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: manual browser AJAX navigation/status-poll lifecycle verification, then actual Hostinger staging PHP/extensions/MySQL/HTTPS verification before physical ZKTeco end-to-end cutover testing.
+- [~] Next: verify the new on-demand status behavior in browser, rerun SQLite/MySQL regression, then actual Hostinger staging PHP/extensions/MySQL/HTTPS verification before physical ZKTeco end-to-end cutover testing.
 
 ## Target
 ```text
