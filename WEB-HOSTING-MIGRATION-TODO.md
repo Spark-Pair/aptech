@@ -1,71 +1,58 @@
 # Web Hosting Migration & Local Attendance Sync Roadmap
 
 > Working branch: `web-hosting-sync` | Base: `main`
-> Rule: read this document before work; update it after work. Never merge to main/master until tested and explicitly approved.
+> Rule: read before work, update after work. Never merge to main/master until tested and explicitly approved.
 
-Status: `[ ]` pending · `[~]` implemented/in testing · `[x]` completed/static verified
-
-## Locked requirements
-- [x] Existing UI/UX remains familiar; no redesign.
-- [x] Modular/reusable architecture; no duplicated integration/business logic.
-- [x] Realtime/responsive feel; reuse existing AJAX/fetch layer and avoid unnecessary page refreshes.
-- [x] Production Laravel uses MySQL and targets Hostinger-style shared hosting.
-- [x] Hosted Laravel must not require direct ZKTeco/private-LAN access after cutover.
+## Locked
+- [x] Same UI/UX; modular/reusable architecture; realtime/AJAX feel; no unnecessary reloads.
+- [x] Production Laravel = MySQL on Hostinger-compatible shared hosting.
+- [x] After cutover, hosted Laravel never directly accesses ZKTeco/private LAN.
 
 ## Completed foundation
-- [x] Existing architecture/database/ZKTeco/AJAX audit completed (`WEB-HOSTING-AUDIT.md`).
-- [x] Versioned API: `/api/v1/attendance-agent/heartbeat` and `/sync`.
-- [x] Agent provisioning model/table and one-time `attendance:agent-provision` token command.
-- [x] SHA-256 token storage, active/revoked authentication, device binding, validation and throttling.
-- [x] Batch idempotency table/unique constraint and explicit sync acknowledgement.
-- [x] Health fields: heartbeat, last successful sync and safe error state.
-- [x] Existing `AttendanceImporter` remains authoritative server-side attendance normalization.
-- [x] Initial API security/validation feature tests added.
+- [x] Architecture/database/ZKTeco/AJAX audit (`WEB-HOSTING-AUDIT.md`).
+- [x] Versioned heartbeat/sync API, agent model, hashed revocable bearer credentials, device binding, validation/throttling.
+- [x] Server batch idempotency + acknowledgement + heartbeat/last-sync/error health fields.
+- [x] Existing `AttendanceImporter` remains authoritative hosted business logic.
+- [x] Initial API tests plus successful-batch replay/idempotency test coverage added (runtime execution still pending).
 
 ## MySQL / shared hosting
-- [~] Static migration compatibility audit positive; real MySQL run required.
-- [ ] Clean migrate + seed on MySQL and repeat-safety check.
-- [ ] Full CRUD/auth/HR/attendance/report regression against MySQL.
-- [ ] Document Hostinger web-root, permissions, PHP extensions, production `.env`, deploy/update/rollback.
-- [ ] Configure/test real Hostinger MySQL and HTTPS in staging before production cutover.
+- [~] Static compatibility audit positive; real MySQL execution required.
+- [ ] Clean migrate/seed on MySQL; full CRUD/auth/HR/attendance/report regression.
+- [ ] Document Hostinger web-root, permissions, PHP extensions, `.env`, deploy/update/rollback.
+- [ ] Staging Hostinger MySQL + HTTPS verification.
 
 ## Local Sync Agent
-- [x] Runtime decision for MVP: Windows-first PHP CLI using the existing ZKTeco PHP package; one-cycle execution suitable for Windows Task Scheduler.
-- [x] Added `local-agent/` with external config and secrets gitignored.
-- [x] Local configurable device IP/port/timeout and hosted API URL/token/device ID.
-- [x] Local ZKTeco reader uses sockets only on the office PC, never the hosting server.
-- [x] Outbound HTTPS API client with bearer token; insecure HTTP rejected by default.
-- [x] Durable local SQLite state/queue (agent-only, not production application DB).
-- [x] Stable UUID batch IDs + server idempotency for safe replay.
-- [x] Exponential capped retry backoff and pending-batch replay before new reads.
-- [x] Local acknowledged timestamp checkpoint.
-- [x] Heartbeat implemented.
-- [~] Auto-start approach selected for MVP: Windows Task Scheduler every minute; installer/service wrapper still pending after real-device verification.
-- [ ] Add structured rotating local diagnostics/log file.
-- [ ] Test real ZKTeco response shape against reader/normalizer.
-- [ ] Test internet loss, API loss, device loss, duplicate replay and PC restart recovery.
-- [ ] Package installation/configuration flow for non-technical deployment.
+- [x] Windows-first PHP CLI MVP reuses existing ZKTeco package and runs as a one-cycle task.
+- [x] External gitignored config; device/API parameters configurable.
+- [x] ZKTeco sockets live only on office PC; API is outbound HTTPS only.
+- [x] Durable agent-only SQLite pending queue/checkpoint.
+- [x] UUID batches, server idempotency, capped exponential retries, pending replay before new reads.
+- [x] Heartbeat and acknowledged-timestamp checkpoint.
+- [x] Safe rotating local diagnostics (`agent.log` + previous file), with bearer-like secret redaction.
+- [~] MVP auto-start plan: Windows Task Scheduler every minute; installer/service wrapper after physical-device verification.
+- [ ] Verify actual ZKTeco response shape against agent normalizer.
+- [ ] Test internet/API/device loss, duplicate replay and PC restart recovery.
+- [ ] Package non-technical installation/configuration flow.
 
-## UI / status
+## UI/status
 - [x] Existing reusable AJAX layer retained; no SPA rewrite.
-- [~] Backend status data exists.
-- [ ] Surface online/offline, heartbeat, last sync and safe errors in existing UI using existing visual language and AJAX.
+- [~] Backend health/status data exists.
+- [ ] Surface online/offline, heartbeat, last sync and safe errors in existing UI with existing visual language/AJAX.
 
-## Tests / cutover
-- [ ] Execute full automated suite in a checked-out runtime.
-- [ ] Add successful sync + duplicate replay tests with employee fixtures.
-- [ ] End-to-end Local Agent -> ZKTeco -> API -> MySQL test.
-- [ ] Regression-test existing UI/UX and asynchronous behavior.
-- [ ] Only after replacement is proven, remove/disable hosted web-request dependency on ZKTeco sockets/private LAN.
-- [ ] Final security review, backup/rollback verification and explicit approval.
-- [ ] Merge to main/master only after explicit approval.
+## Cutover/testing
+- [ ] Execute full automated suite in checked-out runtime.
+- [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
+- [ ] UI regression and async stale-data checks.
+- [ ] Only after replacement proves stable, disable/remove hosted ZKTeco socket/private-LAN dependency.
+- [ ] Security review, backup/rollback, explicit approval, then merge.
 
-## Progress log — 2026-09-12
-- [x] Created isolated `web-hosting-sync`; main/master untouched.
-- [x] Completed audit and secure server API foundation.
-- [x] Added Windows-first Local Sync Agent foundation with durable queue/checkpoint, HTTPS client, heartbeat, local ZKTeco reader and retry/idempotency strategy.
-- [x] Legacy hosted ZKTeco path remains intact intentionally for staged migration.
-- [~] Next: improve automated sync/idempotency tests and agent diagnostics, then expose sync health in the unchanged UI. Real MySQL/Hostinger and physical ZKTeco verification require the relevant runtime/environment.
+## Progress — 2026-09-12
+- [x] `web-hosting-sync` isolated; main/master untouched.
+- [x] Audit + secure API foundation completed.
+- [x] Local Agent foundation implemented: LAN reader, HTTPS client, durable queue, checkpoint, retry/idempotency, heartbeat and diagnostics.
+- [x] API idempotency test coverage expanded.
+- [x] Legacy hosted ZKTeco path intentionally preserved for staged migration.
+- [~] Next: device/sync status UI and packaging support. MySQL/Hostinger + physical ZKTeco verification require the corresponding environments.
 
 ## Target
 ```text
