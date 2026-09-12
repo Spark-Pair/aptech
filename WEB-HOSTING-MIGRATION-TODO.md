@@ -49,8 +49,8 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [ ] Browser-test AJAX navigation and visual status updates with the on-demand status fetch.
 
 ## Cutover/testing
-- [x] Windows SQLite regression suite is green: 22 passed, 0 failed, 0 skipped, 119 assertions on 2026-09-12.
-- [x] Windows MySQL 8.0.46 regression suite is green on disposable `aptech_test`: 22 tests, 119 assertions on 2026-09-12.
+- [x] Windows SQLite regression suite previously green: 22 passed, 119 assertions on 2026-09-12; rerun pending after throttle-isolation test fix.
+- [x] Windows MySQL 8.0.46 regression suite previously green on disposable `aptech_test`: 22 tests, 119 assertions on 2026-09-12; rerun pending after throttle-isolation test fix.
 - [x] Attendance Agent API runtime checks pass, including successful batch replay/idempotency.
 - [x] Successful sync replay/idempotency test has explicit employee fixture, uses machine `empid`, verifies one sync batch and imported attendance.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
@@ -66,16 +66,15 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Local Sync Agent status wired into existing Operations UI through authenticated endpoint.
 - [x] Attendance Agent API/idempotency runtime coverage passes.
 - [x] Employee detail and monthly Early/Late presentation regression coverage aligned with current UI without redesigning production views.
-- [x] HR tests use report aliases `present_days`/`absent_days`/`working_days`, documented CSV `empid` header, username login, and correct failed-connect cleanup semantics; repeat import asserts a single attendance row.
-- [x] Disposable MySQL 8.0.46 connection verified through PDO/Laravel; all nine migrations and seeding completed cleanly (`users=1`, no seeded employees/shifts/attendances).
+- [x] Disposable MySQL 8.0.46 connection verified through PDO/Laravel; all nine migrations and seeding completed cleanly.
 - [x] Dedicated MySQL PHPUnit configuration added; it does not store the database password.
 - [x] Expanded status regression added: unauthenticated access, Operations status hook, online/offline calculation, health/error payload and token-hash non-disclosure.
-- [x] Windows SQLite runtime after status coverage: 22 tests passed, 119 assertions, 5.13s.
-- [x] Windows MySQL 8.0.46 runtime after status coverage: 22 tests passed, 119 assertions, 5.050s using `phpunit.mysql.xml`.
 - [x] Browser confirmed initial Operations status request returns HTTP 200 and renders the no-agent state.
 - [x] User rejected continuous browser polling for shared-hosting load; 30-second timer removed. Status now fetches only when Operations loads/is entered.
+- [x] Repeated local runs exposed cache-backed route-throttle counters leaking between PHPUnit processes (`login` and legacy `fetchLogs` could return 429 before functional assertions).
+- [x] Test base now disables only Laravel `ThrottleRequests` middleware during automated functional tests; production route throttles remain configured and unchanged.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: verify the new on-demand status behavior in browser, rerun SQLite/MySQL regression, then actual Hostinger staging PHP/extensions/MySQL/HTTPS verification before physical ZKTeco end-to-end cutover testing.
+- [~] Next: pull throttle-isolation fix and rerun SQLite twice plus MySQL once. If green, finish on-demand browser verification and proceed to actual Hostinger staging PHP/extensions/MySQL/HTTPS verification.
 
 ## Target
 ```text
