@@ -19,27 +19,24 @@
 ## MySQL / shared hosting
 - [~] Static compatibility audit positive; real MySQL execution required.
 - [ ] Clean migrate/seed on MySQL; full CRUD/auth/HR/attendance/report regression.
-- [x] Hostinger target deployment guide added: `docs/HOSTINGER-DEPLOYMENT.md` (runtime, web-root, permissions, production env, deploy/update/rollback and verification checklist).
-- [ ] Verify actual target hosting PHP/extensions/document-root behavior.
-- [ ] Staging Hostinger MySQL + HTTPS verification.
+- [x] Hostinger deployment target documented in `docs/HOSTINGER-DEPLOYMENT.md`.
+- [ ] Verify target hosting PHP/extensions/document-root and staging MySQL/HTTPS.
 
 ## Local Sync Agent
-- [x] Windows-first PHP CLI MVP reuses existing ZKTeco package and runs one cycle per invocation.
-- [x] External gitignored config; device/API parameters configurable.
-- [x] ZKTeco sockets only on office PC; API outbound HTTPS only.
-- [x] Durable agent-only SQLite queue/checkpoint; UUID batches; server idempotency; capped exponential retries.
-- [x] Heartbeat, acknowledged timestamp and pending replay before new reads.
-- [x] Safe rotating local diagnostics with bearer-like secret redaction.
-- [x] PowerShell Task Scheduler install/uninstall helpers; one-minute schedule, missed-start recovery and overlap prevention.
-- [x] Setup/security/recovery instructions documented in `local-agent/README.md`.
-- [ ] Verify actual ZKTeco response shape against normalizer.
+- [x] Windows-first PHP CLI MVP, external gitignored config, configurable device/API parameters.
+- [x] ZKTeco sockets only on office PC; outbound HTTPS API only.
+- [x] Durable agent-only SQLite queue/checkpoint, UUID idempotency, capped exponential retries and pending replay.
+- [x] Heartbeat, acknowledged timestamp, safe rotating diagnostics.
+- [x] PowerShell Task Scheduler install/uninstall helpers with one-minute schedule and overlap prevention.
+- [x] Setup/security/recovery README.
+- [ ] Verify actual physical ZKTeco response shape.
 - [ ] Test internet/API/device loss, duplicate replay and PC restart recovery.
 - [ ] Refine non-technical installer after real-device test.
 
 ## UI/status
 - [x] Existing AJAX layer retained; no SPA rewrite.
-- [~] Backend health/status data exists.
-- [ ] Surface online/offline, heartbeat, last sync and safe errors using existing UI/AJAX.
+- [x] Added reusable server status controller calculating active/online state from heartbeat and returning heartbeat/sync/error fields.
+- [ ] Wire status controller into authenticated existing web UI and poll asynchronously without changing visual language.
 
 ## Cutover/testing
 - [ ] Execute full automated suite in checked-out runtime.
@@ -50,13 +47,12 @@
 
 ## Progress — 2026-09-12
 - [x] `web-hosting-sync` isolated; main/master untouched.
-- [x] Audit + secure API foundation completed and API contract documented.
-- [x] Local Agent implemented: LAN reader, HTTPS client, durable queue/checkpoint, retry/idempotency, heartbeat, diagnostics.
+- [x] Audit + secure API + Local Agent foundation completed.
+- [x] Agent diagnostics, automatic Windows scheduling helpers, API contract and Hostinger deployment guide added.
 - [x] API idempotency coverage expanded.
-- [x] Windows scheduled execution/install/uninstall helpers and agent deployment README added.
-- [x] Hostinger deployment/update/rollback target documented.
+- [x] Server-side agent status endpoint logic added for upcoming AJAX UI integration.
 - [x] Legacy hosted ZKTeco path intentionally preserved for staged migration.
-- [~] Next: device/sync status UI. Real MySQL/Hostinger + physical ZKTeco verification require corresponding environments.
+- [~] Next: connect agent status to authenticated existing UI, then runtime/environment verification.
 
 ## Target
 ```text
