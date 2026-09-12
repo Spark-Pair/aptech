@@ -33,8 +33,9 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Windows Task Scheduler install/uninstall helpers; prerequisite gate, overlap prevention, execution ceiling.
 - [x] Prerequisite checker validates PHP 8.1+, sockets, curl, pdo_sqlite, sqlite3 and Composer autoload.
 - [x] Setup/security/recovery guide + expanded physical failure/replay/checkpoint test plan.
+- [x] Dedicated `docs/PHYSICAL-TEST-RESULTS.md` created so environment-dependent results are recorded rather than assumed.
 - [~] Timestamp checkpoint provisional until same-timestamp/backfill behavior verified.
-- [ ] Execute physical ZKTeco test plan and record actual response shape.
+- [ ] Execute physical ZKTeco test plan and record actual response shape/results.
 - [ ] Refine non-technical installer after real-device test.
 
 ## UI/status
@@ -53,11 +54,11 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 ## Progress — 2026-09-12
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
-- [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan and docs index added.
+- [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan, result log and docs index added.
 - [x] Server-side status logic + safe UI integration plan prepared.
 - [x] Timestamp checkpoint risk explicitly tracked and added to physical tests.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: authenticated device/sync status UI wiring after latest Blade review. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent.
+- [~] Next: authenticated device/sync status UI wiring after latest Blade review. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent and must be recorded in the result log.
 
 ## Target
 ```text
