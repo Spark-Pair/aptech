@@ -30,7 +30,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] ZKTeco sockets only on office PC; outbound HTTPS only.
 - [x] Durable agent-only SQLite queue/checkpoint, UUID idempotency, capped retries/pending replay.
 - [x] Heartbeat, safe rotating diagnostics and acknowledged timestamp.
-- [x] Windows Task Scheduler install/uninstall helpers.
+- [x] Windows Task Scheduler install/uninstall helpers; installer now refuses setup if runtime prerequisites fail.
 - [x] Prerequisite checker validates PHP 8.1+, sockets, curl, pdo_sqlite, sqlite3 and Composer autoload.
 - [x] Setup/security/recovery guide + end-to-end failure/replay test plan.
 - [~] Timestamp checkpoint provisional until physical same-timestamp/backfill behavior verified; edge case documented.
@@ -54,6 +54,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
 - [x] Agent diagnostics, Windows scheduling, prerequisite checker, API contract, MySQL checklist, Hostinger guide, recovery test plan and docs index added.
+- [x] Windows installer now gates installation on prerequisites.
 - [x] Server-side status logic + safe UI integration plan prepared.
 - [x] Timestamp checkpoint edge case explicitly tracked.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
