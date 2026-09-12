@@ -3,7 +3,6 @@
     var main = null;
     var token = document.querySelector('meta[name="csrf-token"]');
     var isLoading = false;
-    var statusTimer = null;
 
     function notify(message, level) {
         if (!message) return;
@@ -39,25 +38,19 @@
         }).join('');
     }
 
-    function startAgentStatusPolling(scope) {
-        if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
+    function loadAgentStatus(scope) {
         var root = scope.querySelector('[data-attendance-agent-status]'); if (!root) return;
         var url = root.dataset.statusUrl; if (!url) return;
-        function poll() {
-            if (!document.body.contains(root)) return;
-            fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
-                .then(function (response) { if (!response.ok) throw new Error('status'); return response.json(); })
-                .then(function (json) { renderAgentStatus(root, json); })
-                .catch(function () { var target = root.querySelector('[data-agent-status-content]'); if (target) target.innerHTML = '<p class="help-block text-danger">Unable to load sync status.</p>'; })
-                .finally(function () { if (document.body.contains(root)) statusTimer = setTimeout(poll, 30000); });
-        }
-        poll();
+        fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function (response) { if (!response.ok) throw new Error('status'); return response.json(); })
+            .then(function (json) { if (document.body.contains(root)) renderAgentStatus(root, json); })
+            .catch(function () { var target = root.querySelector('[data-agent-status-content]'); if (target && document.body.contains(root)) target.innerHTML = '<p class="help-block text-danger">Unable to load sync status.</p>'; });
     }
 
     function replaceMainFromHtml(html, url, scrollToDetails, skipHistory) {
         var doc = new DOMParser().parseFromString(html, 'text/html'); var next = doc.getElementById('main-content');
         if (!next || !main) { window.location = url; return; }
-        main.innerHTML = next.innerHTML; document.title = doc.title; if (!skipHistory) history.pushState({}, doc.title, url); bindAjax(main); startAgentStatusPolling(main);
+        main.innerHTML = next.innerHTML; document.title = doc.title; if (!skipHistory) history.pushState({}, doc.title, url); bindAjax(main); loadAgentStatus(main);
         var focusTarget = scrollToDetails ? document.getElementById('employee-details') : main.querySelector('.page-header h1'); if (focusTarget) focusTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
@@ -79,7 +72,7 @@
         scope.querySelectorAll('[data-employee-url]').forEach(function (row) { if (row.dataset.ajaxBound) return; row.dataset.ajaxBound = 'true'; row.addEventListener('click', function () { loadPage(row.dataset.employeeUrl, true); }); });
     }
 
-    function initPortal() { main = document.getElementById('main-content'); if (main) { bindAjax(document); startAgentStatusPolling(document); } }
+    function initPortal() { main = document.getElementById('main-content'); if (main) { bindAjax(document); loadAgentStatus(document); } }
     document.querySelectorAll('[data-print]').forEach(function (button) { button.addEventListener('click', function () { window.print(); }); });
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initPortal); else initPortal();
     window.addEventListener('popstate', function () { loadPage(window.location.href, false, true); });
