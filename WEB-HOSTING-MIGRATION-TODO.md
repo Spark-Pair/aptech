@@ -41,7 +41,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Existing AJAX layer retained; no SPA rewrite.
 - [x] Server status controller prepared for active/online/heartbeat/sync/error data.
 - [x] No-redesign authenticated AJAX status integration guardrails documented.
-- [ ] Review latest operations/attendance Blade on updated branch, then wire authenticated status route/region/polling.
+- [ ] Fetch/review latest operations/attendance Blade + routes from this updated branch, then wire authenticated status route/region/polling without stale-file overwrite.
 
 ## Cutover/testing
 - [ ] Execute full automated suite in checked-out runtime.
@@ -58,7 +58,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Server-side status logic + UI integration guardrails prepared.
 - [x] Device-cursor risk separated from transport idempotency; staged-cutover rule recorded.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: authenticated device/sync status UI wiring after latest Blade review. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent and must be recorded.
+- [~] Next: fetch latest UI files from the now-updated branch and implement authenticated status polling. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent and must be recorded.
 
 ## Target
 ```text
