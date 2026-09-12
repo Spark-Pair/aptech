@@ -39,9 +39,11 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 
 ## UI/status
 - [x] Existing AJAX layer retained; no SPA rewrite.
-- [x] Server status controller prepared for active/online/heartbeat/sync/error data.
-- [x] No-redesign authenticated AJAX status integration guardrails documented.
-- [ ] Fetch/review latest operations/attendance Blade + routes from this updated branch, then wire authenticated status route/region/polling without stale-file overwrite.
+- [x] Server status controller provides active/online/heartbeat/sync/error data.
+- [x] Authenticated status route is inside the existing `auth` route group and separately throttled.
+- [x] Operations page has a no-redesign Local Sync Agent status region while legacy direct-device action remains available during staged migration.
+- [x] Existing portal AJAX layer polls status asynchronously every 30 seconds, escapes server values, survives AJAX navigation and stops polling when the status region leaves the DOM.
+- [ ] Runtime-test authenticated/unauthenticated status behavior and AJAX navigation/poll lifecycle in browser.
 
 ## Cutover/testing
 - [ ] Execute full automated suite in checked-out runtime.
@@ -55,10 +57,10 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
 - [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan, result log and docs index added.
-- [x] Server-side status logic + UI integration guardrails prepared.
+- [x] Local Sync Agent status is now wired into the existing Operations UI through an authenticated status endpoint and 30-second AJAX polling; no full-page refresh or redesign introduced.
 - [x] Device-cursor risk separated from transport idempotency; staged-cutover rule recorded.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: fetch latest UI files from updated branch and implement authenticated status polling. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent and must be recorded.
+- [~] Next environment-dependent gates: execute automated/runtime tests, clean MySQL verification, Hostinger staging verification, and physical ZKTeco Agent -> API -> MySQL test. Record real results before any cutover.
 
 ## Target
 ```text
