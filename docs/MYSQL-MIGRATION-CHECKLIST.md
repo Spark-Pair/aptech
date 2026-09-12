@@ -3,12 +3,13 @@
 Production Laravel uses MySQL. SQLite may remain for local development/tests and Local Agent private queue only.
 
 ## Disposable DB
-1. Create disposable MySQL DB and set `.env` to `DB_CONNECTION=mysql`.
+1. Create a disposable MySQL DB and set/override the connection for that disposable database only.
 2. `php artisan optimize:clear`.
-3. On disposable DB only: `php artisan migrate:fresh --seed`.
-4. `php artisan test`.
-5. Exercise login, employees, shifts, attendance import/reporting and AJAX forms/navigation.
-6. Record actual results in `docs/PHYSICAL-TEST-RESULTS.md` (or a linked staging result entry).
+3. On the disposable DB only: `php artisan migrate:fresh --seed`.
+4. Export/provide the disposable database password in the shell; do not commit it. Run the MySQL-specific suite with `vendor\bin\phpunit.bat -c phpunit.mysql.xml` on Windows (or `vendor/bin/phpunit -c phpunit.mysql.xml` on Unix-like systems). The normal `php artisan test` intentionally remains the SQLite regression suite because `phpunit.xml` forces SQLite in-memory testing.
+5. Confirm the PHPUnit output explicitly names `phpunit.mysql.xml` and passes before recording the MySQL regression as green.
+6. Exercise login, employees, shifts, attendance import/reporting and AJAX forms/navigation in a browser.
+7. Record actual results in `docs/PHYSICAL-TEST-RESULTS.md` (or a linked staging result entry).
 
 ## Existing SQLite data
 Never copy SQLite file as production DB or blindly convert it. Take immutable backup, inventory/count business tables, migrate into an empty Laravel-created MySQL schema in dependency order, preserve IDs where relationships require them, compare counts/key totals/dates, then run application/report checks.
