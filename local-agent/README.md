@@ -20,4 +20,4 @@ Windows-first PHP CLI agent on the same LAN as ZKTeco. It sends attendance to ho
 Never expose port 4370 publicly. Never commit `config.json`, `state.sqlite` or logs. Rotate a token by provisioning the same device identifier again and updating local config.
 
 ## Staged migration
-The legacy hosted ZKTeco path stays until physical-device + API + MySQL end-to-end tests pass.
+The legacy hosted ZKTeco path stays until physical-device + API + MySQL end-to-end tests pass. The timestamp checkpoint is provisional until the physical device is checked for same-timestamp or delayed/backfilled rows; see `docs/IMPLEMENTATION-NOTES.md`.
