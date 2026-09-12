@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\AttendanceSyncAgent;
 use App\Models\Employee;
 use App\Models\User;
 use App\Services\ZKTecoService;
@@ -43,6 +44,42 @@ class HrPortalTest extends TestCase
         }
         $this->get('/leaves')->assertSee('Test Employee')->assertSee('Machine Code');
         $this->get('/employees?month=2026-08')->assertOk()->assertSee('August 2026');
+    }
+
+    public function test_attendance_agent_status_requires_auth_and_operations_exposes_polling_hook(): void
+    {
+        $this->get('/attendance-agent/status')->assertRedirect(route('login'));
+        $this->signIn();
+        $this->get('/operations')->assertOk()
+            ->assertSee('data-attendance-agent-status', false)
+            ->assertSee('data-status-url="'.route('attendance-agent.status').'"', false);
+    }
+
+    public function test_attendance_agent_status_reports_online_offline_health_without_exposing_token(): void
+    {
+        Carbon::setTestNow('2026-09-12 12:00:00');
+        $this->signIn();
+        AttendanceSyncAgent::create([
+            'name' => 'Office Agent', 'device_identifier' => 'zk-office-1', 'token_hash' => hash('sha256', 'secret-token'),
+            'is_active' => true, 'last_heartbeat_at' => now()->subMinute(), 'last_sync_at' => now()->subMinutes(2), 'last_error' => null,
+        ]);
+        AttendanceSyncAgent::create([
+            'name' => 'Old Agent', 'device_identifier' => 'zk-old-1', 'token_hash' => hash('sha256', 'old-secret'),
+            'is_active' => true, 'last_heartbeat_at' => now()->subMinutes(4), 'last_error' => 'Device unreachable',
+        ]);
+
+        $response = $this->getJson('/attendance-agent/status')->assertOk()
+            ->assertJsonPath('agents.0.name', 'Office Agent')
+            ->assertJsonPath('agents.0.online', true)
+            ->assertJsonPath('agents.1.name', 'Old Agent')
+            ->assertJsonPath('agents.1.online', false)
+            ->assertJsonPath('agents.1.last_error', 'Device unreachable')
+            ->assertJsonPath('server_time', now()->toIso8601String());
+
+        $this->assertStringNotContainsString('secret-token', $response->getContent());
+        $this->assertStringNotContainsString('old-secret', $response->getContent());
+        $this->assertStringNotContainsString('token_hash', $response->getContent());
+        Carbon::setTestNow();
     }
 
     public function test_employee_validation_hashing_update_and_machine_identity(): void
