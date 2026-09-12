@@ -46,7 +46,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [ ] Runtime-test authenticated/unauthenticated status behavior and AJAX navigation/poll lifecycle in browser.
 
 ## Cutover/testing
-- [~] Third Windows runtime suite: 19 passed, 1 failed, 0 skipped, 121 assertions. Attendance Agent idempotency now executes and passes. The sole failure is a stale HTML-shape assertion expecting Early/Late totals as adjacent `<td>` cells, while the unchanged current UI correctly renders totals in infobox cards. Test updated to assert `selectedSummary` values and the current infobox output; re-run required.
+- [~] Fourth Windows runtime suite: 16 passed, 4 failed, 0 skipped, 92 assertions. Failures were traced to stale test-contract assumptions rather than new production regressions: report count aliases are `present_days`/`absent_days`; CSV contract requires `empid,timestamp,type`; failed device connection intentionally does not disconnect an unconnected client; login contract is username/password. Regression tests updated to those actual contracts; re-run required.
 - [x] Attendance Agent API runtime checks pass, including successful batch replay/idempotency.
 - [x] Successful sync replay/idempotency test has explicit employee fixture, uses machine `empid`, verifies one sync batch and imported attendance.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
@@ -60,12 +60,12 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Audit + secure API + Local Agent foundation completed.
 - [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan, result log and docs index added.
 - [x] Local Sync Agent status wired into existing Operations UI through authenticated endpoint and 30-second AJAX polling.
-- [x] First runtime: 16 passed, 3 failed, 1 skipped. Employee edit/update routes and unique validation fixed.
-- [x] Second runtime: 17 passed, 2 failed, 1 skipped. Employee detail route fixed and explicit idempotency fixture added.
-- [x] Third runtime: 19 passed, 1 failed, 0 skipped. All functional/API tests now execute; remaining failure is only an outdated presentation assertion. Runtime output itself confirms Early Min 25 and Late Min 12 are correctly rendered in the current UI.
-- [x] Updated monthly totals test to validate the view data plus current infobox markup instead of obsolete adjacent-table-cell markup; production UI code was not changed for this assertion fix.
+- [x] Attendance Agent API/idempotency runtime coverage passes.
+- [x] Employee detail and monthly Early/Late presentation regression coverage aligned with current UI without redesigning production views.
+- [x] Fourth runtime exposed four stale HR test assumptions. Each was checked against production source contracts before changing tests.
+- [x] HR tests now use report aliases `present_days`/`absent_days`/`working_days`, the documented CSV `empid` header, username login, and correct failed-connect cleanup semantics. Import test also explicitly replays the same valid CSV and asserts a single attendance row.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: pull latest `web-hosting-sync`, clear caches and rerun `php artisan test`. Target zero failures/zero skips. Then proceed immediately to disposable MySQL verification.
+- [~] Next: pull latest `web-hosting-sync`, clear caches and rerun `php artisan test`. Target zero failures/zero skips. If green, proceed immediately to disposable MySQL verification.
 
 ## Target
 ```text
