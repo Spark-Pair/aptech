@@ -3,13 +3,15 @@
 > Working branch: `web-hosting-sync` | Base: `main`
 > Rule: read before work, update after work. Never merge to main/master until tested and explicitly approved.
 
+Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
+
 ## Locked
 - [x] Same UI/UX; modular/reusable architecture; realtime/AJAX feel; no unnecessary reloads.
 - [x] Production Laravel = MySQL on Hostinger-compatible shared hosting.
 - [x] After cutover, hosted Laravel never directly accesses ZKTeco/private LAN.
 
 ## Completed foundation
-- [x] Architecture/database/ZKTeco/AJAX audit (`WEB-HOSTING-AUDIT.md`).
+- [x] Architecture/database/ZKTeco/AJAX audit.
 - [x] Versioned heartbeat/sync API, agent model, hashed revocable bearer credentials, device binding, validation/throttling.
 - [x] Server batch idempotency + acknowledgement + heartbeat/last-sync/error health fields.
 - [x] Existing `AttendanceImporter` remains authoritative hosted business logic.
@@ -30,7 +32,7 @@
 - [x] Heartbeat, safe rotating diagnostics and acknowledged timestamp.
 - [x] Windows Task Scheduler install/uninstall helpers and prerequisite checker.
 - [x] Setup/security/recovery guide + end-to-end failure/replay test plan.
-- [~] Timestamp checkpoint is provisional; physical test must verify same-timestamp/delayed-device-log behavior. Edge case documented in `docs/IMPLEMENTATION-NOTES.md`; use per-punch fingerprint/cursor if needed.
+- [~] Timestamp checkpoint provisional until physical same-timestamp/backfill behavior verified; edge case documented.
 - [ ] Execute physical ZKTeco test plan and record actual response shape.
 - [ ] Refine non-technical installer after real-device test.
 
@@ -50,9 +52,9 @@
 ## Progress — 2026-09-12
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
-- [x] Agent diagnostics, Windows scheduling, prerequisite checker, API contract, MySQL checklist, Hostinger guide and recovery test plan added.
+- [x] Agent diagnostics, Windows scheduling, prerequisite checker, API contract, MySQL checklist, Hostinger guide, recovery test plan and docs index added.
 - [x] Server-side status logic + safe UI integration plan prepared.
-- [x] Identified/documented timestamp-checkpoint edge case instead of falsely marking physical duplicate safety verified.
+- [x] Timestamp checkpoint edge case explicitly tracked.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
 - [~] Next: authenticated device/sync status UI wiring after latest Blade review. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent.
 
