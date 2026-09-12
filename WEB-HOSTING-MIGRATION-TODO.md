@@ -37,7 +37,8 @@
 ## UI/status
 - [x] Existing AJAX layer retained; no SPA rewrite.
 - [x] Server status controller prepared for active/online/heartbeat/sync/error data.
-- [ ] Wire it into authenticated existing UI and asynchronous polling without redesign.
+- [x] No-redesign authenticated AJAX status integration rules documented in `docs/STATUS-UI-INTEGRATION.md`.
+- [ ] Review latest operations/attendance Blade on updated branch, then wire authenticated status route/region/polling without disrupting current UI.
 
 ## Cutover/testing
 - [ ] Execute full automated suite in checked-out runtime.
@@ -50,9 +51,9 @@
 - [x] `web-hosting-sync` isolated; main/master untouched.
 - [x] Audit + secure API + Local Agent foundation completed.
 - [x] Agent diagnostics, Windows scheduling, prerequisite checker, API contract, MySQL checklist, Hostinger guide and recovery test plan added.
-- [x] Server-side agent status logic prepared.
+- [x] Server-side status logic + safe UI integration plan prepared.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: authenticated device/sync status UI. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent.
+- [~] Next: authenticated device/sync status UI wiring after latest Blade review. Real MySQL/Hostinger + physical ZKTeco verification remain environment-dependent.
 
 ## Target
 ```text
