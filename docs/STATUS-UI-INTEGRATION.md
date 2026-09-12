@@ -12,4 +12,6 @@ Requirements:
 - Show Online/Offline, last heartbeat, last successful sync, concise safe error.
 - Never expose bearer token/hash, stack trace or private config.
 - Keep legacy Sync Now behavior until Local Agent cutover.
-- Review the latest Blade/routes before wiring to avoid disrupting current UI.
+- Review latest Blade/routes before wiring to avoid disrupting current UI.
+
+Implementation is deliberately paused at this boundary until the latest operations Blade/routes are fetched from the updated working branch; this avoids overwriting UI changes with a stale copy.
