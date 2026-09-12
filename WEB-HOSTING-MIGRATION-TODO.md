@@ -49,8 +49,8 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [ ] Browser-test AJAX navigation and visual status updates with the on-demand status fetch.
 
 ## Cutover/testing
-- [x] Windows SQLite regression suite previously green: 22 passed, 119 assertions on 2026-09-12; rerun pending after throttle-isolation test fix.
-- [x] Windows MySQL 8.0.46 regression suite previously green on disposable `aptech_test`: 22 tests, 119 assertions on 2026-09-12; rerun pending after throttle-isolation test fix.
+- [x] Windows SQLite regression is deterministic after throttle-isolation fix: two consecutive runs each passed 22 tests / 119 assertions on 2026-09-12 (12.36s and 11.13s).
+- [x] Windows MySQL 8.0.46 regression is green after throttle-isolation fix on disposable `aptech_test`: 22 tests / 119 assertions on 2026-09-12 (14.004s).
 - [x] Attendance Agent API runtime checks pass, including successful batch replay/idempotency.
 - [x] Successful sync replay/idempotency test has explicit employee fixture, uses machine `empid`, verifies one sync batch and imported attendance.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
@@ -72,9 +72,11 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Browser confirmed initial Operations status request returns HTTP 200 and renders the no-agent state.
 - [x] User rejected continuous browser polling for shared-hosting load; 30-second timer removed. Status now fetches only when Operations loads/is entered.
 - [x] Repeated local runs exposed cache-backed route-throttle counters leaking between PHPUnit processes (`login` and legacy `fetchLogs` could return 429 before functional assertions).
-- [x] Test base now disables only Laravel `ThrottleRequests` middleware during automated functional tests; production route throttles remain configured and unchanged.
+- [x] Test base disables only Laravel `ThrottleRequests` middleware during automated functional tests; production route throttles remain configured and unchanged.
+- [x] Post-fix SQLite verification completed twice consecutively: both runs 22/22 tests, 119 assertions.
+- [x] Post-fix MySQL 8.0.46 verification completed: 22/22 tests, 119 assertions using `phpunit.mysql.xml`.
 - [x] Legacy hosted ZKTeco path intentionally preserved.
-- [~] Next: pull throttle-isolation fix and rerun SQLite twice plus MySQL once. If green, finish on-demand browser verification and proceed to actual Hostinger staging PHP/extensions/MySQL/HTTPS verification.
+- [~] Next: finish browser verification of on-demand status (one request on Operations entry, no background polling), then proceed to actual Hostinger staging PHP/extensions/document-root/MySQL/HTTPS verification before physical ZKTeco end-to-end cutover testing.
 
 ## Target
 ```text
