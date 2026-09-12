@@ -1,7 +1,10 @@
 param([string]$PhpPath = "php.exe")
 $ErrorActionPreference = "Stop"
 $agent = Join-Path $PSScriptRoot "agent.php"
-if (!(Test-Path (Join-Path $PSScriptRoot "config.json"))) { throw "Create local-agent/config.json before installing the task." }
+$config = Join-Path $PSScriptRoot "config.json"
+if (!(Test-Path $config)) { throw "Create local-agent/config.json before installing the task." }
+& $PhpPath (Join-Path $PSScriptRoot "check-requirements.php")
+if ($LASTEXITCODE -ne 0) { throw "Local Agent requirements check failed." }
 $action = New-ScheduledTaskAction -Execute $PhpPath -Argument ('"' + $agent + '"') -WorkingDirectory $PSScriptRoot
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1)
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew
