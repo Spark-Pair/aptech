@@ -33,9 +33,9 @@ class ApiClient
         $decoded = json_decode($body, true);
         if ($status < 200 || $status >= 300) {
             throw new RuntimeException(
-                'API returned HTTP ' . $status . '. Response: ' . $body
+                'API returned HTTP '.$status.'. Response: '.$body
             );
-        };
+        }
         return is_array($decoded) ? $decoded : [];
     }
 }
