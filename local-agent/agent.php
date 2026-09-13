@@ -1,14 +1,98 @@
 <?php
 declare(strict_types=1);
-$root=dirname(__DIR__);require $root.'/vendor/autoload.php';foreach(['AgentState','ApiException','ApiClient','ZKTecoReader','Logger','AttendanceLogNormalizer','DeviceUserNormalizer'] as $f)require __DIR__.'/src/'.$f.'.php';
-use LocalAttendanceAgent\AgentState;use LocalAttendanceAgent\ApiClient;use LocalAttendanceAgent\ApiException;use LocalAttendanceAgent\ZKTecoReader;use LocalAttendanceAgent\Logger;use LocalAttendanceAgent\AttendanceLogNormalizer;use LocalAttendanceAgent\DeviceUserNormalizer;
-$configPath=__DIR__.'/config.json';if(!is_file($configPath)){fwrite(STDERR,"Missing local-agent/config.json. Copy config.example.json first.\n");exit(1);}$config=json_decode(file_get_contents($configPath),true,512,JSON_THROW_ON_ERROR);foreach(['api_base_url','api_token','device_identifier','device_ip','device_port'] as $required){if(empty($config[$required]))throw new RuntimeException("Missing config: {$required}");}
-$deviceTimezoneName=(string)($config['device_timezone']??'Asia/Karachi');try{$deviceTimezone=new DateTimeZone($deviceTimezoneName);}catch(Throwable $e){throw new RuntimeException('Invalid device_timezone in local-agent/config.json. Use an IANA timezone such as Asia/Karachi.');}
-$state=new AgentState(__DIR__.'/state.sqlite');$api=new ApiClient($config);$reader=new ZKTecoReader($config);$log=new Logger(__DIR__.'/logs');$normalizer=new AttendanceLogNormalizer($log,(int)($config['future_skew_seconds']??300),$deviceTimezone);$userNormalizer=new DeviceUserNormalizer($log);
-function agentUuid():string{$d=random_bytes(16);$d[6]=chr((ord($d[6])&15)|64);$d[8]=chr((ord($d[8])&63)|128);return vsprintf('%s%s-%s-%s-%s-%s%s%s',str_split(bin2hex($d),4));}
-try{
- $retried=0;foreach($state->dueBatches() as $batch){try{$stored=json_decode($batch['payload'],true,512,JSON_THROW_ON_ERROR);$max=$stored['_max_timestamp']??null;unset($stored['_max_timestamp']);$api->sync($stored);$state->acknowledge($batch['batch_id']);if($max)$state->set('last_acknowledged_timestamp',$max);$retried++;}catch(ApiException $e){if($e->isRetryable()){$state->retry($batch['batch_id'],(int)($config['retry_base_seconds']??30),(int)($config['retry_max_seconds']??1800));$log->error('Retry batch '.$batch['batch_id'].' failed: '.$e->getMessage());}else{$state->deadLetter($batch['batch_id'],$e->getMessage(),$e->statusCode());$log->error('Retry batch '.$batch['batch_id'].' moved to dead letter: '.$e->getMessage());}}catch(Throwable $e){$state->retry($batch['batch_id'],(int)($config['retry_base_seconds']??30),(int)($config['retry_max_seconds']??1800));$log->error('Retry batch '.$batch['batch_id'].' failed: '.$e->getMessage());}}
- $api->heartbeat();$rawUsers=$reader->readUsers();$users=$userNormalizer->normalize($rawUsers);$api->syncUsers(['device_identifier'=>$config['device_identifier'],'users'=>$users]);$raw=$reader->readAttendance();$logs=$normalizer->normalize($raw,$state->get('last_acknowledged_timestamp'));$size=max(1,min(1000,(int)($config['batch_size']??500)));$sent=0;
- foreach(array_chunk($logs,$size) as $chunk){$id=agentUuid();$max=$chunk[count($chunk)-1]['timestamp'];$http=['batch_id'=>$id,'device_identifier'=>$config['device_identifier'],'logs'=>$chunk];$stored=$http;$stored['_max_timestamp']=$max;$state->queue($id,$stored);try{$api->sync($http);$state->acknowledge($id);$state->set('last_acknowledged_timestamp',$max);$sent+=count($chunk);}catch(ApiException $e){if($e->isRetryable()){$state->retry($id,(int)($config['retry_base_seconds']??30),(int)($config['retry_max_seconds']??1800));$log->error('New batch '.$id.' queued for retry: '.$e->getMessage());}else{$state->deadLetter($id,$e->getMessage(),$e->statusCode());$log->error('New batch '.$id.' moved to dead letter: '.$e->getMessage());}break;}catch(Throwable $e){$state->retry($id,(int)($config['retry_base_seconds']??30),(int)($config['retry_max_seconds']??1800));$log->error('New batch '.$id.' queued for retry: '.$e->getMessage());break;}}
- $log->info('Cycle complete. Device rows='.count($raw).', new rows='.$sent.', replayed batches='.$retried.'.');exit(0);
-}catch(Throwable $e){$log->error($e->getMessage());fwrite(STDERR,'['.date('c').'] '.$e->getMessage().PHP_EOL);exit(1);}
+
+$root = dirname(__DIR__);
+require $root.'/vendor/autoload.php';
+
+foreach ([
+    'AgentState',
+    'ApiException',
+    'ApiClient',
+    'ZKTecoReader',
+    'Logger',
+    'AttendanceLogNormalizer',
+    'DeviceUserNormalizer',
+    'DeviceAttendanceIdentity',
+    'AgentRunner',
+] as $f) {
+    require __DIR__.'/src/'.$f.'.php';
+}
+
+use LocalAttendanceAgent\AgentRunner;
+use LocalAttendanceAgent\AgentState;
+use LocalAttendanceAgent\ApiClient;
+use LocalAttendanceAgent\AttendanceLogNormalizer;
+use LocalAttendanceAgent\DeviceAttendanceIdentity;
+use LocalAttendanceAgent\DeviceUserNormalizer;
+use LocalAttendanceAgent\Logger;
+use LocalAttendanceAgent\ZKTecoReader;
+
+$configPath = __DIR__.'/config.json';
+if (! is_file($configPath)) {
+    fwrite(STDERR, "Missing local-agent/config.json. Copy config.example.json first.\n");
+    exit(1);
+}
+
+$config = json_decode(file_get_contents($configPath), true, 512, JSON_THROW_ON_ERROR);
+foreach (['api_base_url', 'api_token', 'device_identifier', 'device_ip', 'device_port'] as $required) {
+    if (empty($config[$required])) {
+        throw new RuntimeException("Missing config: {$required}");
+    }
+}
+
+$deviceTimezoneName = (string) ($config['device_timezone'] ?? 'Asia/Karachi');
+try {
+    $deviceTimezone = new DateTimeZone($deviceTimezoneName);
+} catch (Throwable $e) {
+    throw new RuntimeException('Invalid device_timezone in local-agent/config.json. Use an IANA timezone such as Asia/Karachi.');
+}
+
+function agentUuid(): string
+{
+    $d = random_bytes(16);
+    $d[6] = chr((ord($d[6]) & 15) | 64);
+    $d[8] = chr((ord($d[8]) & 63) | 128);
+
+    return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($d), 4));
+}
+
+$state = new AgentState(__DIR__.'/state.sqlite');
+$api = new ApiClient($config);
+$reader = new ZKTecoReader($config);
+$log = new Logger(__DIR__.'/logs');
+$runner = new AgentRunner(
+    $config,
+    $state,
+    $api,
+    $reader,
+    $log,
+    new AttendanceLogNormalizer($log, (int) ($config['future_skew_seconds'] ?? 300), $deviceTimezone),
+    new DeviceUserNormalizer($log),
+    new DeviceAttendanceIdentity(),
+);
+
+$mode = $argv[1] ?? '--once';
+
+try {
+    if ($mode === '--run') {
+        $runner->runContinuously();
+        exit(0);
+    }
+
+    if ($mode === '--cleanup-dry-run') {
+        echo json_encode($runner->cleanupDryRun(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL;
+        exit(0);
+    }
+
+    if ($mode !== '--once') {
+        fwrite(STDERR, "Usage: php local-agent/agent.php [--once|--run|--cleanup-dry-run]\n");
+        exit(1);
+    }
+
+    $runner->runOnce();
+    exit(0);
+} catch (Throwable $e) {
+    $log->error($e->getMessage());
+    fwrite(STDERR, '['.date('c').'] '.$e->getMessage().PHP_EOL);
+    exit(1);
+}

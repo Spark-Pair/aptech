@@ -71,8 +71,31 @@ New feature implemented, not yet physically verified:
 - Expected first production verification after pulling this change: device `userid=1`, `name=Hasan` creates one Laravel employee with `empid=1`, `name=Hasan`.
 - Automated verification after user-sync implementation: `vendor\bin\phpunit --configuration phpunit.xml` passed with 45 tests and 196 assertions.
 
+## Local Agent hardening after user sync
+
+Static library inspection:
+- `Rats\Zkteco\Lib\Helper\Attendance::get()` uses `CMD_ATT_LOG_RRQ`, documented as reading all attendance records.
+- The installed library exposes `clearAttendance()` / `CMD_CLEAR_ATT_LOG`, documented as clearing all attendance records.
+- No per-record attendance delete or delete-through-position API was found in the installed library.
+
+Implemented but not physically verified:
+- Continuous Local Agent mode with `--run` and configurable `poll_interval_seconds` defaulting to 5 seconds.
+- One-cycle diagnostic mode with `--once`.
+- Non-destructive `--cleanup-dry-run` diagnostics.
+- Durable local attendance record fingerprints so duplicate historical `getAttendance()` responses are not re-posted every cycle.
+- ACK-based local cleanup eligibility tracking in SQLite; a record becomes ACKed only after a confirmed Laravel API acknowledgement or idempotent replay acknowledgement.
+- Local acknowledged-history pruning for SQLite metadata only; pending and dead-letter records are preserved.
+- Automated verification after continuous-agent hardening: `vendor\bin\phpunit --configuration phpunit.xml` passed with 55 tests and 221 assertions.
+
+Safety gate:
+- Real device attendance deletion remains disabled.
+- Because the library is bulk-clear-only, no real-device cleanup should be enabled until dry-run output is reviewed on the physical device and a bulk-clear threshold strategy is explicitly approved.
+
 Not yet physically passed:
 - Automatic user creation on production.
-- Exact same-timestamp punches.
-- Delayed/backfilled older punches appearing after a newer checkpoint.
+- Continuous `--run` operation on the Windows agent.
+- Device cleanup dry-run output on the real ZKTeco.
+- Any real ZKTeco attendance deletion or bulk clear.
+- Exact same-timestamp punches on the physical device.
+- Delayed/backfilled older punches on the physical device.
 - Physical outage, restart and replay scenarios not explicitly listed as passed above.

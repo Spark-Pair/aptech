@@ -65,6 +65,10 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Local Agent timestamp validation corrected to parse ZKTeco wall-clock timestamps in a configured IANA device timezone instead of relying on PHP's default timezone.
 - [x] Automatic non-destructive Device User -> Employee synchronization implemented. Local Agent sends only safe fields (`userid`, `name`) and Laravel creates missing employees by `employees.empid = ZKTeco userid`.
 - [x] User-sync automated coverage passed with the full SQLite suite: 45 tests / 196 assertions.
+- [x] Local Agent continuous mode implemented with `--run`, one-cycle diagnostics with `--once`, and non-destructive cleanup diagnostics with `--cleanup-dry-run`.
+- [x] Installed Rats/ZKTeco library inspected: attendance reads return the full log; cleanup support is bulk `clearAttendance()` only, with no per-record delete API found.
+- [x] Local Agent now tracks durable attendance record fingerprints and ACK status in SQLite so duplicate historical reads, same-timestamp rows and delayed older rows are not filtered solely by timestamp.
+- [x] Real device attendance cleanup remains disabled by default and dry-run only pending physical review.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
 - [x] UI regression for Local Sync Agent status: server-side coverage plus browser on-demand/AJAX navigation behavior passed; continuous polling absent.
 - [x] Staged-cutover rule documented: Local Agent existence alone never removes legacy direct-device code.
@@ -108,7 +112,8 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Attendance transport physically passed before cleanup: stale future rows skipped, valid uid 52 synced, production attendance count increased 47 -> 48, accepted sync batch count was 1, and MariaDB insert was verified.
 - [x] Production business/test data was intentionally cleaned after the transport test; current production counts were reported as users 1, agents 1, sync batches 0, attendances 0, employees 0, shifts 0.
 - [x] Real ZKTeco `getUser()` succeeded and returned one business user: `userid=1`, `name=Hasan`. The raw device API exposes security-sensitive fields, but the Local Agent deliberately discards them.
-- [~] Next: pull automatic user sync to the Windows Local Agent and physically verify `userid=1` creates Laravel employee `empid=1` before attendance import. Same-timestamp and delayed/backfilled older punch behavior remain unresolved physical checkpoint caveats.
+- [x] Local Agent hardening added: continuous worker mode, full-history dedupe by durable record fingerprint, ACK-gated local state, bounded acknowledged metadata pruning and cleanup dry-run diagnostics. Full SQLite suite passes after implementation: 55 tests / 221 assertions.
+- [~] Next: pull automatic user sync and continuous-agent hardening to the Windows Local Agent; physically verify `userid=1` creates Laravel employee `empid=1`, run one controlled attendance cycle, then run cleanup dry-run diagnostics. Real device cleanup remains disabled. Same-timestamp and delayed/backfilled older punch behavior are covered by automated fingerprint tests but still need physical verification.
 
 ## Target
 ```text
