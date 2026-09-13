@@ -6,6 +6,7 @@
   "device_port": 4370,
   "device_timeout": 5,
   "batch_size": 500,
+  "future_skew_seconds": 300,
   "http_timeout": 20,
   "retry_base_seconds": 30,
   "retry_max_seconds": 1800

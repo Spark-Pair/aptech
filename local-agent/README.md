@@ -11,7 +11,7 @@ Windows-first PHP CLI agent on the same LAN as ZKTeco. It sends attendance to ho
 6. `local-agent/uninstall-task.ps1` removes only the task and preserves local config/state.
 
 ## Behavior
-Local port 4370 read; no public forwarding. Outbound HTTPS API only. Durable unsent queue, capped retry, stable UUID transport idempotency, acknowledged timestamp checkpoint, heartbeat and rotating diagnostics.
+Local port 4370 read; no public forwarding. Outbound HTTPS API only. Device rows are validated before batching so malformed, unsupported or clearly future-dated machine rows cannot poison valid rows. Durable unsent queue, dead-letter storage for permanent payload failures, capped retry for transient failures, stable UUID transport idempotency, acknowledged timestamp checkpoint, heartbeat and rotating diagnostics.
 
 ## Security
 Never expose port 4370 publicly. Never commit `config.json`, `state.sqlite` or logs. Rotate token by provisioning same device identifier again and updating local config.

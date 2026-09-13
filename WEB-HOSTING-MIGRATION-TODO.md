@@ -60,6 +60,8 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Windows MySQL 8.0.46 regression is green after throttle-isolation fix on disposable `aptech_test`: 22 tests / 119 assertions on 2026-09-12 (14.004s).
 - [x] Attendance Agent API runtime checks pass, including successful batch replay/idempotency.
 - [x] Successful sync replay/idempotency test has explicit employee fixture, uses machine `empid`, verifies one sync batch and imported attendance.
+- [x] Local Agent poison-batch handling implemented: invalid/malformed/future device rows are skipped before batching with safe diagnostics, and stale future rows no longer advance the acknowledged timestamp checkpoint.
+- [x] Local Agent API failure handling distinguishes success, transient failures, permanent payload failures and auth/config failures; permanent queued payload failures are moved out of the active retry queue into SQLite dead-letter storage.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
 - [x] UI regression for Local Sync Agent status: server-side coverage plus browser on-demand/AJAX navigation behavior passed; continuous polling absent.
 - [x] Staged-cutover rule documented: Local Agent existence alone never removes legacy direct-device code.
@@ -95,7 +97,10 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Hostinger direct HTTPS tests pass for root and `www`; public DNS resolvers now advertise Hostinger IP `45.84.206.232`.
 - [x] Authenticated browser smoke test reaches the deployed Operations page and renders Attendance Device Sync with `No Local Sync Agent has been provisioned yet.`
 - [x] Legacy hosted ZKTeco path intentionally preserved during physical Local Agent validation.
-- [~] Next: provision the Local Sync Agent, execute real ZKTeco -> Agent -> HTTPS API -> MariaDB end-to-end tests (including same-timestamp/backfill behavior), then complete document-root/old-server retirement review.
+- [x] Physical Local Agent testing identified a ZKTeco clock issue: stale rows with `2026-09-20` timestamps remained on the device after the clock was corrected, while a new valid punch returned `2026-09-13 14:18:42`.
+- [x] Local Agent poison-batch recovery added after physical observation that Laravel correctly rejected the mixed batch with HTTP 422.
+- [x] Automated verification after the fix on 2026-09-13: Local Agent unit coverage passed 10 tests / 18 assertions; Attendance Agent API coverage passed 7 tests / 15 assertions; full SQLite suite passed 33 tests / 140 assertions.
+- [~] Next: pull the fix to the Windows Local Agent and physically verify real ZKTeco -> Agent -> HTTPS API -> MariaDB attendance sync. Same-timestamp and delayed/backfilled older punch behavior remain unresolved physical checkpoint caveats.
 
 ## Target
 ```text

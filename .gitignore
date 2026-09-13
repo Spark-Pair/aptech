@@ -8,6 +8,9 @@
 .env
 .env.backup
 .env.production
+local-agent/config.json
+local-agent/state.sqlite
+local-agent/logs/
 .phpunit.result.cache
 Homestead.json
 Homestead.yaml
