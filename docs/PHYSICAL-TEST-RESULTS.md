@@ -46,8 +46,33 @@ Automated verification after timezone fix:
 - `vendor\bin\phpunit --configuration phpunit.xml --filter AttendanceAgentApiTest`: 8 tests, 19 assertions, passed.
 - `vendor\bin\phpunit --configuration phpunit.xml`: 35 tests, 147 assertions, passed.
 
+## Attendance transport passed before production cleanup
+
+Physically verified:
+- Stale future rows uid `50` and uid `51` were skipped.
+- Valid uid `52` timestamp `2026-09-13 14:18:42` synced through Windows Local Agent -> HTTPS -> Hostinger Laravel API -> `AttendanceImporter` -> MariaDB.
+- Production attendance count increased from 47 to 48.
+- The accepted sync batch reported `accepted_count=1`.
+- Production MariaDB insert was verified.
+
+After that verification, production business/test data was intentionally cleaned. Current production business counts were reported as: users `1`, attendance sync agents `1`, attendance sync batches `0`, attendances `0`, employees `0`, shifts `0`. The existing Office Agent remains the agent credential to use for the next test.
+
+## Physical device user read on 2026-09-13
+
+Physically verified:
+- A real ZKTeco `getUser()` call succeeded.
+- The current physical device returned one user with `userid=1` and `name=Hasan`.
+
+Security note:
+- The raw device API also exposes security-sensitive fields. The Local Agent deliberately discards those fields and only sends `userid` and `name` for user sync.
+
+New feature implemented, not yet physically verified:
+- Automatic non-destructive Device User -> Employee synchronization.
+- Expected first production verification after pulling this change: device `userid=1`, `name=Hasan` creates one Laravel employee with `empid=1`, `name=Hasan`.
+- Automated verification after user-sync implementation: `vendor\bin\phpunit --configuration phpunit.xml` passed with 45 tests and 196 assertions.
+
 Not yet physically passed:
-- Corrected valid attendance arriving in production MariaDB after the Local Agent poison-batch fix.
+- Automatic user creation on production.
 - Exact same-timestamp punches.
 - Delayed/backfilled older punches appearing after a newer checkpoint.
 - Physical outage, restart and replay scenarios not explicitly listed as passed above.

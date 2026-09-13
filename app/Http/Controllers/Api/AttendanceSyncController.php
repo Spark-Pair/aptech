@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AttendanceAgentSyncRequest;
+use App\Http\Requests\AttendanceAgentUsersRequest;
 use App\Models\AttendanceSyncBatch;
 use App\Services\AttendanceImporter;
+use App\Services\DeviceUserSyncService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +25,30 @@ class AttendanceSyncController extends Controller
         return response()->json([
             'message' => 'Heartbeat accepted.',
             'server_time' => now()->toIso8601String(),
+        ]);
+    }
+
+    public function users(AttendanceAgentUsersRequest $request, DeviceUserSyncService $sync): JsonResponse
+    {
+        $agent = $request->attributes->get('attendance_sync_agent');
+        $data = $request->validated();
+
+        if (! hash_equals($agent->device_identifier, $data['device_identifier'])) {
+            return response()->json(['message' => 'Device is not authorized for this credential.'], 403);
+        }
+
+        $result = $sync->sync($data['users']);
+
+        $agent->forceFill([
+            'last_heartbeat_at' => now(),
+            'last_error' => null,
+        ])->save();
+
+        return response()->json([
+            'message' => 'Device users synchronized.',
+            'created' => $result['created'],
+            'existing' => $result['existing'],
+            'skipped' => $result['skipped'],
         ]);
     }
 

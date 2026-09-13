@@ -13,6 +13,10 @@ class ApiClient
     {
         return $this->post('/api/v1/attendance-agent/sync', $payload);
     }
+    public function syncUsers(array $payload): array
+    {
+        return $this->post('/api/v1/attendance-agent/users', $payload);
+    }
     private function post(string $path, array $payload): array
     {
         if (!function_exists('curl_init')) throw new \RuntimeException('PHP cURL extension is required.');

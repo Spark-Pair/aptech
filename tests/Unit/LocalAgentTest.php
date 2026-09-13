@@ -7,6 +7,7 @@ use DateTimeZone;
 use LocalAttendanceAgent\AgentState;
 use LocalAttendanceAgent\ApiException;
 use LocalAttendanceAgent\AttendanceLogNormalizer;
+use LocalAttendanceAgent\DeviceUserNormalizer;
 use LocalAttendanceAgent\Logger;
 use PHPUnit\Framework\TestCase;
 
@@ -14,6 +15,7 @@ require_once __DIR__.'/../../local-agent/src/AgentState.php';
 require_once __DIR__.'/../../local-agent/src/ApiException.php';
 require_once __DIR__.'/../../local-agent/src/Logger.php';
 require_once __DIR__.'/../../local-agent/src/AttendanceLogNormalizer.php';
+require_once __DIR__.'/../../local-agent/src/DeviceUserNormalizer.php';
 
 class LocalAgentTest extends TestCase
 {
@@ -168,9 +170,46 @@ class LocalAgentTest extends TestCase
         $this->assertStringContainsString('[REDACTED]', $exception->safeResponseBody() ?? '');
     }
 
+    public function test_device_user_normalization_keeps_only_safe_api_fields(): void
+    {
+        $users = $this->userNormalizer()->normalize([
+            [
+                'uid' => 1,
+                'userid' => 1,
+                'name' => 'Hasan',
+                'role' => 14,
+                'password' => 'zkteco-device-password',
+                'cardno' => '0000000000',
+            ],
+        ]);
+
+        $this->assertSame([['userid' => '1', 'name' => 'Hasan']], $users);
+        $this->assertArrayNotHasKey('password', $users[0]);
+        $this->assertArrayNotHasKey('cardno', $users[0]);
+        $this->assertArrayNotHasKey('uid', $users[0]);
+        $this->assertArrayNotHasKey('role', $users[0]);
+    }
+
+    public function test_device_user_normalization_skips_invalid_userid_without_logging_password(): void
+    {
+        $users = $this->userNormalizer()->normalize([
+            ['userid' => '', 'name' => 'Bad', 'password' => 'zkteco-device-password', 'cardno' => '0000000000'],
+        ]);
+
+        $this->assertSame([], $users);
+        $this->assertStringContainsString('reason=invalid_userid', $this->agentLog());
+        $this->assertStringNotContainsString('zkteco-device-password', $this->agentLog());
+        $this->assertStringNotContainsString('0000000000', $this->agentLog());
+    }
+
     private function normalizer(?DateTimeZone $timezone = null, ?DateTimeImmutable $now = null): AttendanceLogNormalizer
     {
         return new AttendanceLogNormalizer(new Logger($this->tempDir), 300, $timezone, $now);
+    }
+
+    private function userNormalizer(): DeviceUserNormalizer
+    {
+        return new DeviceUserNormalizer(new Logger($this->tempDir));
     }
 
     private function state(): AgentState

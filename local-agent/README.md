@@ -11,7 +11,7 @@ Windows-first PHP CLI agent on the same LAN as ZKTeco. It sends attendance to ho
 6. `local-agent/uninstall-task.ps1` removes only the task and preserves local config/state.
 
 ## Behavior
-Local port 4370 read; no public forwarding. Outbound HTTPS API only. Device rows are validated before batching so malformed, unsupported or clearly future-dated machine rows cannot poison valid rows. ZKTeco timestamps are interpreted as device local wall-clock timestamps using `device_timezone` from `config.json` (`Asia/Karachi` for Pakistan). Durable unsent queue, dead-letter storage for permanent payload failures, capped retry for transient failures, stable UUID transport idempotency, acknowledged timestamp checkpoint, heartbeat and rotating diagnostics.
+Local port 4370 read; no public forwarding. Outbound HTTPS API only. Each normal cycle syncs safe device users before attendance, so missing Laravel employees can be created before punches import. Device user sync sends only `userid` and `name`; it discards ZKTeco password, card/security fields, biometric data, role and device-internal uid. Device rows are validated before batching so malformed, unsupported or clearly future-dated machine rows cannot poison valid rows. ZKTeco timestamps are interpreted as device local wall-clock timestamps using `device_timezone` from `config.json` (`Asia/Karachi` for Pakistan). Durable unsent queue, dead-letter storage for permanent payload failures, capped retry for transient failures, stable UUID transport idempotency, acknowledged timestamp checkpoint, heartbeat and rotating diagnostics.
 
 ## Security
 Never expose port 4370 publicly. Never commit `config.json`, `state.sqlite` or logs. Rotate token by provisioning same device identifier again and updating local config.

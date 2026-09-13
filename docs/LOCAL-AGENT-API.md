@@ -5,6 +5,14 @@ Base: `/api/v1/attendance-agent`. Auth: `Authorization: Bearer <provisioned-toke
 ## POST /heartbeat
 Body `{}`. HTTP 200 updates heartbeat and returns server time.
 
+## POST /users
+```json
+{"device_identifier":"zk-office-1","users":[{"userid":"1","name":"Hasan"}]}
+```
+Rules: same bearer auth and device binding as attendance sync; up to 1000 users per request; `userid` is the ZKTeco business user ID and maps to `employees.empid`; `name` is optional and defaults to `Device User {userid}` when blank. The sync is create/link-only: it creates missing employees and does not overwrite manually maintained employee fields or delete/deactivate employees absent from the device.
+
+Success returns `created`, `existing`, `skipped`. The Local Agent deliberately does not transmit ZKTeco `password`, biometric data, `cardno`, `role` or device-internal `uid`.
+
 ## POST /sync
 ```json
 {"batch_id":"stable-uuid","device_identifier":"zk-office-1","logs":[{"id":12,"timestamp":"2026-09-12 09:01:10","type":0}]}

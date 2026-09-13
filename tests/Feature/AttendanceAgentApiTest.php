@@ -15,6 +15,58 @@ class AttendanceAgentApiTest extends TestCase {
  public function test_inactive_agent_is_rejected():void{$a=$this->agent();$a->update(['is_active'=>false]);$this->withToken($this->token)->postJson('/api/v1/attendance-agent/heartbeat')->assertUnauthorized();}
  public function test_sync_rejects_wrong_device_identifier():void{$this->agent();$this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'batch-1','device_identifier'=>'wrong','logs'=>[['id'=>1,'timestamp'=>'2026-09-10 09:00:00','type'=>0]]])->assertForbidden();}
  public function test_sync_validates_bounded_logs():void{$this->agent();$this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'batch-1','device_identifier'=>'zk-office-1','logs'=>[]])->assertUnprocessable()->assertJsonValidationErrors(['logs']);}
+ public function test_user_sync_requires_bearer_token():void{$this->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[]])->assertUnauthorized();}
+ public function test_user_sync_rejects_wrong_device_identifier():void{$this->agent();$this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'wrong','users'=>[['userid'=>1,'name'=>'Hasan']]])->assertForbidden();}
+ public function test_user_sync_validates_payload():void{$this->agent();$this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[['userid'=>0,'name'=>str_repeat('x',256)]]])->assertUnprocessable()->assertJsonValidationErrors(['users.0.userid','users.0.name']);}
+ public function test_user_sync_creates_missing_employee_from_device_user():void{
+  $this->agent();
+  $this->travelTo(\Carbon\CarbonImmutable::parse('2026-09-13 14:46:15', config('app.timezone')));
+  $this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[['userid'=>1,'name'=>'Hasan']]])->assertOk()->assertJson(['created'=>1,'existing'=>0,'skipped'=>0]);
+  $employee=Employee::where('empid',1)->firstOrFail();
+  $this->assertSame('Hasan',$employee->name);
+  $this->assertSame('device_1',$employee->username);
+  $this->assertSame('Employee',$employee->designation);
+  $this->assertSame('Unassigned',$employee->department);
+  $this->assertSame('2026-09-13',$employee->joining_date->toDateString());
+  $this->assertSame('0.00',(string)$employee->salary);
+  $this->assertTrue($employee->is_active);
+  $this->assertNull($employee->shift_id);
+  $this->assertFalse(Hash::check('zkteco-device-password',$employee->password));
+ }
+ public function test_user_sync_is_idempotent_for_same_device_user():void{
+  $this->agent();
+  $payload=['device_identifier'=>'zk-office-1','users'=>[['userid'=>1,'name'=>'Hasan']]];
+  $this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',$payload)->assertOk()->assertJson(['created'=>1,'existing'=>0]);
+  $this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',$payload)->assertOk()->assertJson(['created'=>0,'existing'=>1]);
+  $this->assertDatabaseCount('employees',1);
+ }
+ public function test_user_sync_does_not_overwrite_existing_employee_business_fields():void{
+  $this->agent();
+  $employee=Employee::create(['empid'=>1,'name'=>'Manual Name','email'=>'manual@example.com','username'=>'manual1','password'=>Hash::make('manual-password'),'designation'=>'Manager','department'=>'Admin','joining_date'=>'2026-01-01','salary'=>50000,'is_active'=>false]);
+  $oldHash=$employee->password;
+  $this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[['userid'=>1,'name'=>'Hasan']]])->assertOk()->assertJson(['created'=>0,'existing'=>1,'skipped'=>0]);
+  $employee=$employee->fresh();
+  $this->assertSame('Manual Name',$employee->name);
+  $this->assertSame('manual@example.com',$employee->email);
+  $this->assertSame('manual1',$employee->username);
+  $this->assertSame($oldHash,$employee->password);
+  $this->assertSame('Manager',$employee->designation);
+  $this->assertSame('Admin',$employee->department);
+  $this->assertSame('2026-01-01',$employee->joining_date->toDateString());
+  $this->assertSame('50000.00',(string)$employee->salary);
+  $this->assertFalse($employee->is_active);
+ }
+ public function test_user_sync_creates_two_missing_employees():void{
+  $this->agent();
+  $this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[['userid'=>1,'name'=>'Hasan'],['userid'=>2,'name'=>'Second']]])->assertOk()->assertJson(['created'=>2,'existing'=>0,'skipped'=>0]);
+  $this->assertDatabaseHas('employees',['empid'=>1,'name'=>'Hasan']);
+  $this->assertDatabaseHas('employees',['empid'=>2,'name'=>'Second']);
+ }
+ public function test_user_sync_uses_safe_name_default_for_empty_name():void{
+  $this->agent();
+  $this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[['userid'=>3,'name'=>'']]])->assertOk()->assertJson(['created'=>1]);
+  $this->assertDatabaseHas('employees',['empid'=>3,'name'=>'Device User 3']);
+ }
  public function test_sync_keeps_server_side_future_timestamp_validation():void{$this->agent();$future=now()->addDay()->format('Y-m-d H:i:s');$this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'future-batch-1','device_identifier'=>'zk-office-1','logs'=>[['id'=>101,'timestamp'=>$future,'type'=>0]]])->assertUnprocessable()->assertJsonValidationErrors(['file']);}
  public function test_sync_accepts_valid_local_wall_clock_timestamp_in_app_timezone():void{
   $this->agent();
