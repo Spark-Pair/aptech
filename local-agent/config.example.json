@@ -4,6 +4,7 @@
   "device_identifier": "zk-office-1",
   "device_ip": "192.168.100.125",
   "device_port": 4370,
+  "device_timezone": "Asia/Karachi",
   "device_timeout": 5,
   "batch_size": 500,
   "future_skew_seconds": 300,

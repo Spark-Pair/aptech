@@ -29,6 +29,23 @@ Automated verification after code fix:
 - `vendor\bin\phpunit --configuration phpunit.xml --filter AttendanceAgentApiTest`: 7 tests, 15 assertions, passed.
 - `vendor\bin\phpunit --configuration phpunit.xml`: 33 tests, 140 assertions, passed.
 
+## Physical Local Agent cycle on 2026-09-13
+
+One controlled Local Agent cycle was run against the physical ZKTeco device.
+
+Passed:
+- Invalid future rows uid `50` (`2026-09-20 13:03:04`) and uid `51` (`2026-09-20 13:25:49`) were detected by the pre-batch filter and skipped with `reason=future_timestamp`.
+
+Failed / bug found:
+- Valid uid `52` (`2026-09-13 14:18:42`) was incorrectly classified as `future_timestamp`.
+- The agent log timestamp was UTC (`2026-09-13T09:46:15+00:00`), while the ZKTeco row was Pakistan local wall-clock time. The row was about 27 minutes old in `Asia/Karachi`, not future.
+- Production attendance sync is still not physically passed.
+
+Automated verification after timezone fix:
+- `vendor\bin\phpunit --configuration phpunit.xml --filter LocalAgentTest`: 11 tests, 23 assertions, passed.
+- `vendor\bin\phpunit --configuration phpunit.xml --filter AttendanceAgentApiTest`: 8 tests, 19 assertions, passed.
+- `vendor\bin\phpunit --configuration phpunit.xml`: 35 tests, 147 assertions, passed.
+
 Not yet physically passed:
 - Corrected valid attendance arriving in production MariaDB after the Local Agent poison-batch fix.
 - Exact same-timestamp punches.

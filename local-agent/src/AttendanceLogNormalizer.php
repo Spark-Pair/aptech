@@ -12,9 +12,10 @@ class AttendanceLogNormalizer
     public function __construct(
         private Logger $logger,
         private int $futureSkewSeconds = 300,
-        private ?DateTimeZone $timezone = null
+        private ?DateTimeZone $timezone = null,
+        private ?DateTimeImmutable $now = null
     ) {
-        $this->timezone ??= new DateTimeZone(date_default_timezone_get());
+        $this->timezone ??= new DateTimeZone('Asia/Karachi');
     }
 
     public function normalize(array $rows, ?string $lastAcknowledgedTimestamp): array
@@ -57,7 +58,8 @@ class AttendanceLogNormalizer
             return null;
         }
 
-        $nowWithSkew = (new DateTimeImmutable('now', $this->timezone))->modify('+'.$this->futureSkewSeconds.' seconds');
+        $now = $this->now ? $this->now->setTimezone($this->timezone) : new DateTimeImmutable('now', $this->timezone);
+        $nowWithSkew = $now->modify('+'.$this->futureSkewSeconds.' seconds');
 
         if ($time > $nowWithSkew) {
             $this->logSkipped($row, 'future_timestamp');

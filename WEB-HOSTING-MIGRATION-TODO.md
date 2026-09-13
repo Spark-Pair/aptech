@@ -62,6 +62,7 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Successful sync replay/idempotency test has explicit employee fixture, uses machine `empid`, verifies one sync batch and imported attendance.
 - [x] Local Agent poison-batch handling implemented: invalid/malformed/future device rows are skipped before batching with safe diagnostics, and stale future rows no longer advance the acknowledged timestamp checkpoint.
 - [x] Local Agent API failure handling distinguishes success, transient failures, permanent payload failures and auth/config failures; permanent queued payload failures are moved out of the active retry queue into SQLite dead-letter storage.
+- [x] Local Agent timestamp validation corrected to parse ZKTeco wall-clock timestamps in a configured IANA device timezone instead of relying on PHP's default timezone.
 - [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
 - [x] UI regression for Local Sync Agent status: server-side coverage plus browser on-demand/AJAX navigation behavior passed; continuous polling absent.
 - [x] Staged-cutover rule documented: Local Agent existence alone never removes legacy direct-device code.
@@ -100,7 +101,9 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Physical Local Agent testing identified a ZKTeco clock issue: stale rows with `2026-09-20` timestamps remained on the device after the clock was corrected, while a new valid punch returned `2026-09-13 14:18:42`.
 - [x] Local Agent poison-batch recovery added after physical observation that Laravel correctly rejected the mixed batch with HTTP 422.
 - [x] Automated verification after the fix on 2026-09-13: Local Agent unit coverage passed 10 tests / 18 assertions; Attendance Agent API coverage passed 7 tests / 15 assertions; full SQLite suite passed 33 tests / 140 assertions.
-- [~] Next: pull the fix to the Windows Local Agent and physically verify real ZKTeco -> Agent -> HTTPS API -> MariaDB attendance sync. Same-timestamp and delayed/backfilled older punch behavior remain unresolved physical checkpoint caveats.
+- [x] Physical one-cycle retest showed uid 50 and uid 51 future rows were correctly filtered, but valid uid 52 `2026-09-13 14:18:42` was incorrectly rejected because the Local Agent compared Pakistan wall-clock device time against UTC default time.
+- [x] Local Agent device timestamp validation now uses configured `device_timezone` with default `Asia/Karachi`; regression coverage freezes UTC `2026-09-13T09:46:15+00:00` and accepts Pakistan wall-clock `2026-09-13 14:18:42` while rejecting `2026-09-20` rows. Full SQLite suite passes: 35 tests / 147 assertions.
+- [~] Next: pull the timezone fix to the Windows Local Agent and physically verify real ZKTeco -> Agent -> HTTPS API -> MariaDB attendance sync. Same-timestamp and delayed/backfilled older punch behavior remain unresolved physical checkpoint caveats.
 
 ## Target
 ```text

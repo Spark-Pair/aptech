@@ -2,6 +2,8 @@
 
 namespace Tests\Unit;
 
+use DateTimeImmutable;
+use DateTimeZone;
 use LocalAttendanceAgent\AgentState;
 use LocalAttendanceAgent\ApiException;
 use LocalAttendanceAgent\AttendanceLogNormalizer;
@@ -16,11 +18,13 @@ require_once __DIR__.'/../../local-agent/src/AttendanceLogNormalizer.php';
 class LocalAgentTest extends TestCase
 {
     private string $tempDir;
+    private string $originalTimezone;
 
     protected function setUp(): void
     {
         parent::setUp();
 
+        $this->originalTimezone = date_default_timezone_get();
         $this->tempDir = sys_get_temp_dir().DIRECTORY_SEPARATOR.'local-agent-test-'.bin2hex(random_bytes(6));
         mkdir($this->tempDir, 0777, true);
     }
@@ -28,6 +32,7 @@ class LocalAgentTest extends TestCase
     protected function tearDown(): void
     {
         $this->deleteDirectory($this->tempDir);
+        date_default_timezone_set($this->originalTimezone);
 
         parent::tearDown();
     }
@@ -87,6 +92,28 @@ class LocalAgentTest extends TestCase
         $this->assertSame([['id' => 1, 'timestamp' => $valid, 'type' => 5]], $logs);
     }
 
+    public function test_device_timezone_prevents_pakistan_wall_clock_punch_from_being_treated_as_future(): void
+    {
+        date_default_timezone_set('UTC');
+        $normalizer = $this->normalizer(
+            new DateTimeZone('Asia/Karachi'),
+            new DateTimeImmutable('2026-09-13T09:46:15+00:00')
+        );
+
+        $logs = $normalizer->normalize([
+            ['uid' => 50, 'id' => 1, 'timestamp' => '2026-09-20 13:03:04', 'type' => 0],
+            ['uid' => 51, 'id' => 1, 'timestamp' => '2026-09-20 13:25:49', 'type' => 5],
+            ['uid' => 52, 'id' => 1, 'timestamp' => '2026-09-13 14:18:42', 'type' => 5],
+        ], null);
+
+        $this->assertSame([['id' => 1, 'timestamp' => '2026-09-13 14:18:42', 'type' => 5]], $logs);
+        $log = $this->agentLog();
+        $this->assertStringContainsString('uid=50', $log);
+        $this->assertStringContainsString('uid=51', $log);
+        $this->assertStringContainsString('reason=future_timestamp', $log);
+        $this->assertStringNotContainsString('uid=52', $log);
+    }
+
     public function test_invalid_future_row_does_not_advance_successful_checkpoint(): void
     {
         $state = $this->state();
@@ -141,9 +168,9 @@ class LocalAgentTest extends TestCase
         $this->assertStringContainsString('[REDACTED]', $exception->safeResponseBody() ?? '');
     }
 
-    private function normalizer(): AttendanceLogNormalizer
+    private function normalizer(?DateTimeZone $timezone = null, ?DateTimeImmutable $now = null): AttendanceLogNormalizer
     {
-        return new AttendanceLogNormalizer(new Logger($this->tempDir), 300);
+        return new AttendanceLogNormalizer(new Logger($this->tempDir), 300, $timezone, $now);
     }
 
     private function state(): AgentState

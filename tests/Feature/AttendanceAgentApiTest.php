@@ -16,6 +16,13 @@ class AttendanceAgentApiTest extends TestCase {
  public function test_sync_rejects_wrong_device_identifier():void{$this->agent();$this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'batch-1','device_identifier'=>'wrong','logs'=>[['id'=>1,'timestamp'=>'2026-09-10 09:00:00','type'=>0]]])->assertForbidden();}
  public function test_sync_validates_bounded_logs():void{$this->agent();$this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'batch-1','device_identifier'=>'zk-office-1','logs'=>[]])->assertUnprocessable()->assertJsonValidationErrors(['logs']);}
  public function test_sync_keeps_server_side_future_timestamp_validation():void{$this->agent();$future=now()->addDay()->format('Y-m-d H:i:s');$this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'future-batch-1','device_identifier'=>'zk-office-1','logs'=>[['id'=>101,'timestamp'=>$future,'type'=>0]]])->assertUnprocessable()->assertJsonValidationErrors(['file']);}
+ public function test_sync_accepts_valid_local_wall_clock_timestamp_in_app_timezone():void{
+  $this->agent();
+  $employee=$this->employee();
+  $this->travelTo(\Carbon\CarbonImmutable::parse('2026-09-13 14:46:15', config('app.timezone')));
+  $this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'local-time-batch-1','device_identifier'=>'zk-office-1','logs'=>[['id'=>(int)$employee->empid,'timestamp'=>'2026-09-13 14:18:42','type'=>5]]])->assertOk();
+  $this->assertDatabaseHas('attendances',['empid'=>101,'date'=>'2026-09-13','status'=>'Present']);
+ }
  public function test_successful_batch_is_idempotent_on_replay():void{
   $this->agent();
   $employee=$this->employee();
