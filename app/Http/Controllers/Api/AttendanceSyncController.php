@@ -42,13 +42,21 @@ class AttendanceSyncController extends Controller
         $existing = AttendanceSyncBatch::where('attendance_sync_agent_id', $agent->id)->where('batch_id', $data['batch_id'])->first();
         if ($existing) return response()->json(['message' => 'Batch already processed.', 'duplicate' => true, 'batch_id' => $existing->batch_id, 'accepted' => $existing->accepted_count, 'skipped' => $existing->skipped_count, 'updated_days' => $existing->updated_days, 'branch_id' => $agent->branch_id]);
 
+        $unmapped = $deviceUsers->unmappedDeviceUserIds($agent, $data['logs']);
+        if ($unmapped !== []) {
+            $agent->forceFill(['last_heartbeat_at' => now(), 'last_error' => 'Attendance sync is waiting for device user mappings.'])->save();
+            return response()->json([
+                'code' => 'device_users_not_synced',
+                'message' => 'Attendance batch is waiting for device user synchronization.',
+                'unmapped_user_ids' => $unmapped,
+            ], 409);
+        }
+
         try {
             $response = DB::transaction(function () use ($agent, $data, $importer, $deviceUsers) {
                 $translated = $deviceUsers->translateLogs($agent, $data['logs']);
-                $unmapped = count($data['logs']) - count($translated);
                 $result = $importer->import($translated, $agent->branch_id);
-                $skipped = $unmapped + $result['skipped'];
-                $batch = AttendanceSyncBatch::create(['attendance_sync_agent_id' => $agent->id, 'batch_id' => $data['batch_id'], 'accepted_count' => count($data['logs']) - $skipped, 'skipped_count' => $skipped, 'updated_days' => $result['days']]);
+                $batch = AttendanceSyncBatch::create(['attendance_sync_agent_id' => $agent->id, 'batch_id' => $data['batch_id'], 'accepted_count' => count($data['logs']) - $result['skipped'], 'skipped_count' => $result['skipped'], 'updated_days' => $result['days']]);
                 $agent->forceFill(['last_heartbeat_at' => now(), 'last_sync_at' => now(), 'last_error' => null])->save();
                 return $batch;
             });
