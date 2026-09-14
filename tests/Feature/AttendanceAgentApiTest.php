@@ -61,7 +61,7 @@ class AttendanceAgentApiTest extends TestCase {
   $this->assertDatabaseCount('attendances',0);
  }
  public function test_successful_batch_is_idempotent_on_replay():void{
-  $agent=$this->agent(); $employee=$this->employee(); $this->map($agent,$employee,'101'); $payload=['batch_id'=>'stable-batch-1','device_identifier'=>'zk-office-1','logs'=>[['id'=>101,'timestamp'=>'2026-09-10 09:00:00','type'=>0],['id'=>101,'timestamp'=>'2026-09-10 17:00:00','type'=>1]];
+  $agent=$this->agent(); $employee=$this->employee(); $this->map($agent,$employee,'101'); $payload=['batch_id'=>'stable-batch-1','device_identifier'=>'zk-office-1','logs'=>[['id'=>101,'timestamp'=>'2026-09-10 09:00:00','type'=>0],['id'=>101,'timestamp'=>'2026-09-10 17:00:00','type'=>1]]];
   $first=$this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',$payload)->assertOk()->assertJson(['duplicate'=>false]); $this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',$payload)->assertOk()->assertJson(['duplicate'=>true,'batch_id'=>'stable-batch-1','accepted'=>$first->json('accepted'),'skipped'=>$first->json('skipped')]);
   $this->assertDatabaseCount('attendance_sync_batches',1); $this->assertDatabaseHas('attendances',['branch_id'=>$agent->branch_id,'empid'=>101,'date'=>'2026-09-10','status'=>'Present']);
  }
