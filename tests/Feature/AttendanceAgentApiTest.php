@@ -35,6 +35,11 @@ class AttendanceAgentApiTest extends TestCase {
   $this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',$payload)->assertOk()->assertJson(['created'=>0,'existing'=>1]);
   $this->assertDatabaseCount('employees',1); $this->assertDatabaseCount('attendance_device_users',1);
  }
+ public function test_user_sync_allocator_skips_empids_created_after_sequence_initialization():void{
+  $this->agent(); $this->employee(1,'Manual Employee');
+  $this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[['userid'=>2,'name'=>'Device Employee']]])->assertOk()->assertJson(['created'=>1]);
+  $this->assertDatabaseHas('employees',['empid'=>2,'name'=>'Device Employee']); $this->assertDatabaseHas('attendance_employee_sequences',['id'=>1,'next_empid'=>3]);
+ }
  public function test_same_device_user_id_on_two_agents_does_not_merge_employees():void{
   $branchA=$this->branch('branch-a'); $branchB=$this->branch('branch-b');
   $agentA=$this->agent($branchA,'zk-a',$this->token); $tokenB='second-test-token-that-is-long-enough-987654321'; $agentB=$this->agent($branchB,'zk-b',$tokenB);
