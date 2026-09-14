@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\AttendanceDeviceUser;
 use App\Models\AttendanceSyncAgent;
 use App\Models\Employee;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -25,7 +24,19 @@ class DeviceUserSyncService
                 if ($deviceUserId === '' || $numericDeviceId === false || $numericDeviceId < 1 || isset($seen[$deviceUserId])) { $skipped++; continue; }
                 $seen[$deviceUserId] = true;
 
-                $mapping = AttendanceDeviceUser::query()->where('attendance_sync_agent_id', $agent->id)->where('device_user_id', $deviceUserId)->first();
+                $mapping = $this->mapping($agent, $deviceUserId);
+                if ($mapping) {
+                    $mapping->update(['device_name' => $this->name($user['name'] ?? null, $deviceUserId)]);
+                    $existing++;
+                    continue;
+                }
+
+                // One small allocator row serializes mapping creation across agents. Re-checking
+                // after the lock prevents a competing request from leaving an orphan employee.
+                $sequence = DB::table('attendance_employee_sequences')->where('id', 1)->lockForUpdate()->first();
+                if (! $sequence) throw new \RuntimeException('Attendance employee sequence is not initialized.');
+
+                $mapping = $this->mapping($agent, $deviceUserId);
                 if ($mapping) {
                     $mapping->update(['device_name' => $this->name($user['name'] ?? null, $deviceUserId)]);
                     $existing++;
@@ -33,19 +44,23 @@ class DeviceUserSyncService
                 }
 
                 $employee = $this->claimLegacyEmployee($deviceUserId);
-                if (! $employee) { $employee = $this->createEmployee($user['name'] ?? null, $deviceUserId); $created++; }
-                else { $existing++; }
-
-                try {
-                    AttendanceDeviceUser::create([
-                        'attendance_sync_agent_id' => $agent->id,
-                        'employee_id' => $employee->id,
-                        'device_user_id' => $deviceUserId,
-                        'device_name' => $this->name($user['name'] ?? null, $deviceUserId),
-                    ]);
-                } catch (QueryException $e) {
-                    if (! AttendanceDeviceUser::query()->where('attendance_sync_agent_id', $agent->id)->where('device_user_id', $deviceUserId)->exists()) throw $e;
+                if (! $employee) {
+                    $employee = $this->createEmployee($user['name'] ?? null, $deviceUserId, (int) $sequence->next_empid);
+                    DB::table('attendance_employee_sequences')->where('id', 1)->update(['next_empid' => $employee->empid + 1]);
+                    $created++;
+                } else {
+                    $existing++;
+                    if ((int) $sequence->next_empid <= $employee->empid) {
+                        DB::table('attendance_employee_sequences')->where('id', 1)->update(['next_empid' => $employee->empid + 1]);
+                    }
                 }
+
+                AttendanceDeviceUser::create([
+                    'attendance_sync_agent_id' => $agent->id,
+                    'employee_id' => $employee->id,
+                    'device_user_id' => $deviceUserId,
+                    'device_name' => $this->name($user['name'] ?? null, $deviceUserId),
+                ]);
             }
             return ['created' => $created, 'existing' => $existing, 'skipped' => $skipped];
         });
@@ -77,15 +92,20 @@ class DeviceUserSyncService
         })->filter()->values()->all();
     }
 
+    private function mapping(AttendanceSyncAgent $agent, string $deviceUserId): ?AttendanceDeviceUser
+    {
+        return AttendanceDeviceUser::query()->where('attendance_sync_agent_id', $agent->id)->where('device_user_id', $deviceUserId)->first();
+    }
+
     private function claimLegacyEmployee(string $deviceUserId): ?Employee
     {
         if (AttendanceDeviceUser::query()->where('device_user_id', $deviceUserId)->exists()) return null;
         return Employee::query()->where('empid', (int) $deviceUserId)->first();
     }
 
-    private function createEmployee(mixed $name, string $deviceUserId): Employee
+    private function createEmployee(mixed $name, string $deviceUserId, int $empid): Employee
     {
-        $empid = max(1, ((int) Employee::max('empid')) + 1);
+        $empid = max(1, $empid);
         return Employee::create([
             'empid' => $empid,
             'name' => $this->name($name, $deviceUserId),
