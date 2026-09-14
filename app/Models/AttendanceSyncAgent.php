@@ -4,12 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AttendanceSyncAgent extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'branch_id',
         'name',
         'device_identifier',
         'token_hash',
@@ -26,4 +28,9 @@ class AttendanceSyncAgent extends Model
         'last_heartbeat_at' => 'datetime',
         'last_sync_at' => 'datetime',
     ];
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Branch::class);
+    }
 }
