@@ -51,6 +51,20 @@ class DeviceUserSyncService
         });
     }
 
+    public function unmappedDeviceUserIds(AttendanceSyncAgent $agent, array $logs): array
+    {
+        $ids = collect($logs)->pluck('id')->filter(fn ($id) => $id !== null && $id !== '')->map(fn ($id) => (string) $id)->unique()->values();
+        if ($ids->isEmpty()) return [];
+
+        $mapped = AttendanceDeviceUser::query()
+            ->where('attendance_sync_agent_id', $agent->id)
+            ->whereIn('device_user_id', $ids)
+            ->pluck('device_user_id')
+            ->map(fn ($id) => (string) $id);
+
+        return $ids->diff($mapped)->values()->all();
+    }
+
     public function translateLogs(AttendanceSyncAgent $agent, array $logs): array
     {
         $ids = collect($logs)->pluck('id')->filter(fn ($id) => $id !== null && $id !== '')->map(fn ($id) => (string) $id)->unique()->values();
