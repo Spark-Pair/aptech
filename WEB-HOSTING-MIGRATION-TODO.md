@@ -21,14 +21,16 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 ## MySQL / shared hosting
 - [x] Static compatibility audit confirmed by real MySQL 8.0.46 execution on disposable `aptech_test` database.
 - [x] MySQL clean-test/existing-data verification checklist documented and linked to result logging.
-- [x] Clean migrate/seed on disposable MySQL completed; expanded automated CRUD/auth/HR/attendance/report/status regression passes: 22 tests, 119 assertions.
-- [x] Dedicated `phpunit.mysql.xml` keeps the existing SQLite test configuration intact and targets the disposable MySQL test database without storing its password.
+- [x] Clean migrate/seed on disposable MySQL completed; expanded automated CRUD/auth/HR/attendance/report/status regression passes.
+- [x] Dedicated `phpunit.mysql.xml` keeps the existing SQLite test configuration intact and targets a disposable MySQL test database without storing its password.
 - [x] Hostinger deployment/update/rollback target documented.
 - [~] Actual Hostinger verification: PHP 8.2.33 and required extensions confirmed; Laravel 10.48.28 runs in production mode with debug off, HTTPS APP_URL, file cache/session and sync queue. Live project currently sits under `public_html` with an internal rewrite to `public/`; sensitive-path checks passed, but preferred document-root isolation review remains.
 - [x] Hostinger database connectivity verified against MariaDB 11.8.9 at `127.0.0.1`.
-- [x] Isolated `web-hosting-sync` staging checkout created outside live `public_html`; Composer production dependencies install successfully on Hostinger.
-- [x] Production SQLite -> MariaDB transfer and integrity verification completed; rollback artifacts retained outside webroot.
-- [!] Do not deploy the new branch/device-identity migrations to production until current branch-safe regression is completed.
+- [x] Isolated Hostinger MariaDB test database `u617460922_aptech_test` and separate `~/aptech-mariadb-test` checkout verified; production DB is not used by the regression checkout.
+- [x] MariaDB clean migration regression passed after adding a dedicated `empid` index before replacing the legacy attendance unique key; both branch and device-user migrations complete successfully.
+- [x] Full automated regression on Hostinger MariaDB passed: 56 tests, 231 assertions, 0 failures.
+- [x] Production SQLite -> MariaDB transfer and integrity verification completed previously; rollback artifacts retained outside webroot.
+- [!] Do not deploy the new branch/device-identity migrations to production until the latest unmapped-user retry behavior is re-tested and physical branch verification is completed.
 
 ## Local Sync Agent
 - [x] Windows-first PHP CLI MVP; external gitignored config and configurable device/API parameters.
@@ -49,14 +51,17 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Attendance uniqueness changed to branch + employee + date.
 - [x] Added `attendance_device_users`: identity is now `(attendance_sync_agent_id, device_user_id) -> employee` rather than global `device_user_id -> empid`.
 - [x] Device user sync now creates/reuses an agent-scoped mapping and preserves manually maintained employee business fields.
-- [x] Attendance API translates device user IDs through the authenticated agent mapping before invoking `AttendanceImporter`; unmapped device IDs are skipped instead of being attached to a coincidentally matching company employee ID.
+- [x] Attendance API translates device user IDs through the authenticated agent mapping before invoking `AttendanceImporter`.
+- [x] Unmapped device IDs are no longer acknowledged as skipped: the server returns machine-readable HTTP 409 `device_users_not_synced` without importing or recording the batch, and the Local Agent classifies only that specific conflict as transient/retryable.
 - [x] Same device user ID on two agents/branches is covered by regression code and maps to separate employees unless explicitly linked later.
 - [x] Legacy first mapping can safely claim an existing employee with matching empid only while that device user ID has not already been mapped by another agent.
 - [x] Attendance page supports All Branches / specific branch filtering and shows branch on rows.
-- [x] Existing report/export controller already carries branch filters and branch columns; Local Sync Agent status now includes branch name.
+- [x] Report UI/controller/export carry branch filters and branch columns; Local Sync Agent status includes branch name.
 - [x] Legacy direct-device fetch is pinned to Main Branch during staged transition so it cannot create unassigned attendance.
-- [ ] Run full SQLite regression locally/CI for the new identity migration and tests.
-- [ ] Run MySQL regression before Hostinger deployment.
+- [x] Full SQLite regression passed before latest unmapped-user retry patch: 56 tests, 231 assertions.
+- [x] Full Hostinger MariaDB regression passed before latest unmapped-user retry patch: 56 tests, 231 assertions.
+- [ ] Re-run SQLite and Hostinger MariaDB regressions for the latest unmapped-user retry patch.
+- [ ] Harden concurrent employee/username allocation and mapping-race cleanup.
 - [ ] Physically verify two-agent/same-device-user-ID behavior before production multi-branch use.
 
 ## UI/status
@@ -66,14 +71,15 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Browser realtime/WebSocket/SSE attendance updates explicitly dropped from scope; normal refresh is acceptable.
 
 ## Cutover/testing
-- [x] Previous Windows SQLite and MySQL regressions passed before multi-branch identity work.
-- [x] Attendance Agent API runtime checks previously passed, including successful batch replay/idempotency.
+- [x] Previous Windows SQLite and Hostinger MariaDB regressions passed before the latest unmapped-user retry patch.
+- [x] Attendance Agent API runtime checks passed, including successful batch replay/idempotency and branch/device-user mapping.
 - [x] Local Agent poison-batch handling, retry classification, device timezone handling, durable fingerprints, ACK tracking and cleanup dry-run implemented.
 - [x] Installed Rats/ZKTeco library inspected: full attendance reads and bulk `clearAttendance()` only; no per-record delete API found.
 - [x] End-to-end real path physically passed: ZKTeco -> Windows Local Agent -> HTTPS -> Hostinger Laravel API -> AttendanceImporter -> MariaDB.
 - [x] Production physical test auto-created device users and persisted attendance; continuous polling/dedup physically observed.
 - [x] Cleanup dry-run physically reviewed; destructive cleanup remains disabled while unresolved rows exist.
 - [x] At-logon background scheduled worker physically ran successfully before startup-mode change.
+- [ ] Re-run automated regression after latest retry-safety patch.
 - [ ] Reinstall latest startup/SYSTEM task and verify after Windows reboot before login; confirm no visible terminal and fresh agent log/heartbeat.
 - [ ] Physically verify exact same-timestamp and delayed/backfilled older punches.
 - [ ] Approve/implement any destructive device bulk-clear threshold separately; never clear while unresolved/pending/dead-letter/ambiguous rows exist.
@@ -86,8 +92,10 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Startup deployment changed from `AtLogOn` current-user execution to `AtStartup` + built-in `SYSTEM` service-account execution, non-interactive and highest privilege.
 - [x] Client deployment direction documented: future one-click installer should provision using a one-time code, not ship long-lived API credentials.
 - [x] Multi-branch collision review found global ZKTeco userid assumption unsafe; branch-safe agent/device-user mapping layer implemented before production migration.
-- [x] Attendance filters/status presentation updated for branch awareness without redesigning the UI.
-- [~] Code is committed only to `web-hosting-sync`; `main`/`master` remain untouched. Runtime regression for this latest identity layer is still required before Hostinger migration.
+- [x] Attendance and report filters/status presentation updated for branch awareness without redesigning the UI.
+- [x] Hostinger MariaDB 11.8.9 clean migrations and full 56-test / 231-assertion regression passed on isolated test DB.
+- [x] Unmapped attendance punch loss risk fixed in code: batch is retained for retry until device-user mappings exist instead of being acknowledged as skipped.
+- [~] Code is committed only to `web-hosting-sync`; `main`/`master` remain untouched. Latest retry-safety patch still needs automated re-run before production migration.
 
 ## Target
 ```text
