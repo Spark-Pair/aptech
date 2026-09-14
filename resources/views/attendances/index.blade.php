@@ -6,6 +6,7 @@
 <x-field name="search" label="Employee Name" :value="request('search')" placeholder="Search employee name" />
 <x-field name="month" label="Month" type="month" :value="$month" required />
 @if(request('empid'))<input type="hidden" name="empid" value="{{ request('empid') }}">@endif
+<div class="form-group"><label for="branch">Branch</label><select id="branch" name="branch" class="form-control"><option value="">All Branches</option>@foreach($branches as $branch)<option value="{{ $branch->id }}" @selected((string)request('branch') === (string)$branch->id)>{{ $branch->name }}</option>@endforeach</select></div>
 <div class="form-group"><label for="status">Status</label><select id="status" name="status" class="form-control"><option value="">All statuses</option>@foreach(['Present','Absent','Off Day','Leave'] as $status)<option @selected(request('status') === $status)>{{ $status }}</option>@endforeach</select></div>
 <div class="filter-actions"><button class="btn btn-info btn-sm"><i aria-hidden="true" class="fa fa-search"></i> Search</button><a href="{{ route('attendances.index') }}" class="btn btn-default btn-sm">Reset</a></div>
 </form>
