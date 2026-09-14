@@ -26,6 +26,7 @@ class AttendanceSyncController extends Controller
         $agent = $request->attributes->get('attendance_sync_agent');
         $data = $request->validated();
         if (! hash_equals($agent->device_identifier, $data['device_identifier'])) return response()->json(['message' => 'Device is not authorized for this credential.'], 403);
+        if (! $agent->branch_id) return response()->json(['message' => 'Attendance agent is not assigned to a branch.'], 409);
         $result = $sync->sync($agent, $data['users']);
         $agent->forceFill(['last_heartbeat_at' => now(), 'last_error' => null])->save();
         return response()->json(['message' => 'Device users synchronized.', 'created' => $result['created'], 'existing' => $result['existing'], 'skipped' => $result['skipped'], 'branch_id' => $agent->branch_id]);
