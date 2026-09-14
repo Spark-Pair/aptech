@@ -9,11 +9,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Attendance extends Model
 {
     use HasFactory;
-    protected $fillable = ['empid','date','check_in','check_out','status'];
+    protected $fillable = ['branch_id','empid','date','check_in','check_out','status'];
     protected $casts = ['check_in'=>'datetime','check_out'=>'datetime','date'=>'date'];
 
     public function setDateAttribute($value): void { $this->attributes['date'] = \Carbon\Carbon::parse($value)->toDateString(); }
     public function employee(): BelongsTo { return $this->belongsTo(Employee::class, 'empid', 'empid'); }
+    public function branch(): BelongsTo { return $this->belongsTo(Branch::class); }
 
     private function shiftBoundary(string $field): ?\Carbon\Carbon
     {
