@@ -37,6 +37,10 @@ return new class extends Migration
         DB::table('attendances')->whereNull('branch_id')->update(['branch_id' => $branchId]);
 
         Schema::table('attendances', function (Blueprint $table) {
+            // MySQL may use the old (empid, date) unique index to support the
+            // empid foreign key. Give that FK its own index before replacing
+            // the uniqueness rule with the branch-aware key.
+            $table->index('empid', 'attendances_empid_index');
             $table->dropUnique(['empid', 'date']);
             $table->unique(['branch_id', 'empid', 'date'], 'attendances_branch_employee_date_unique');
             $table->index(['branch_id', 'date'], 'attendances_branch_date_index');
@@ -49,6 +53,7 @@ return new class extends Migration
             $table->dropUnique('attendances_branch_employee_date_unique');
             $table->dropIndex('attendances_branch_date_index');
             $table->unique(['empid', 'date']);
+            $table->dropIndex('attendances_empid_index');
             $table->dropConstrainedForeignId('branch_id');
         });
 
