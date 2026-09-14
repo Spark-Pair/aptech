@@ -45,7 +45,8 @@ class DeviceUserSyncService
 
                 $employee = $this->claimLegacyEmployee($deviceUserId);
                 if (! $employee) {
-                    $employee = $this->createEmployee($user['name'] ?? null, $deviceUserId, (int) $sequence->next_empid);
+                    $empid = $this->nextAvailableEmpid((int) $sequence->next_empid);
+                    $employee = $this->createEmployee($user['name'] ?? null, $deviceUserId, $empid);
                     DB::table('attendance_employee_sequences')->where('id', 1)->update(['next_empid' => $employee->empid + 1]);
                     $created++;
                 } else {
@@ -103,9 +104,15 @@ class DeviceUserSyncService
         return Employee::query()->where('empid', (int) $deviceUserId)->first();
     }
 
+    private function nextAvailableEmpid(int $candidate): int
+    {
+        $candidate = max(1, $candidate);
+        while (Employee::query()->where('empid', $candidate)->exists()) $candidate++;
+        return $candidate;
+    }
+
     private function createEmployee(mixed $name, string $deviceUserId, int $empid): Employee
     {
-        $empid = max(1, $empid);
         return Employee::create([
             'empid' => $empid,
             'name' => $this->name($name, $deviceUserId),
