@@ -26,12 +26,12 @@ class AttendanceSyncController extends Controller
         $agent = $request->attributes->get('attendance_sync_agent');
         $data = $request->validated();
         if (! hash_equals($agent->device_identifier, $data['device_identifier'])) return response()->json(['message' => 'Device is not authorized for this credential.'], 403);
-        $result = $sync->sync($data['users']);
+        $result = $sync->sync($agent, $data['users']);
         $agent->forceFill(['last_heartbeat_at' => now(), 'last_error' => null])->save();
         return response()->json(['message' => 'Device users synchronized.', 'created' => $result['created'], 'existing' => $result['existing'], 'skipped' => $result['skipped'], 'branch_id' => $agent->branch_id]);
     }
 
-    public function sync(AttendanceAgentSyncRequest $request, AttendanceImporter $importer): JsonResponse
+    public function sync(AttendanceAgentSyncRequest $request, AttendanceImporter $importer, DeviceUserSyncService $deviceUsers): JsonResponse
     {
         $agent = $request->attributes->get('attendance_sync_agent');
         $data = $request->validated();
@@ -42,9 +42,12 @@ class AttendanceSyncController extends Controller
         if ($existing) return response()->json(['message' => 'Batch already processed.', 'duplicate' => true, 'batch_id' => $existing->batch_id, 'accepted' => $existing->accepted_count, 'skipped' => $existing->skipped_count, 'updated_days' => $existing->updated_days, 'branch_id' => $agent->branch_id]);
 
         try {
-            $response = DB::transaction(function () use ($agent, $data, $importer) {
-                $result = $importer->import($data['logs'], $agent->branch_id);
-                $batch = AttendanceSyncBatch::create(['attendance_sync_agent_id' => $agent->id, 'batch_id' => $data['batch_id'], 'accepted_count' => count($data['logs']) - $result['skipped'], 'skipped_count' => $result['skipped'], 'updated_days' => $result['days']]);
+            $response = DB::transaction(function () use ($agent, $data, $importer, $deviceUsers) {
+                $translated = $deviceUsers->translateLogs($agent, $data['logs']);
+                $unmapped = count($data['logs']) - count($translated);
+                $result = $importer->import($translated, $agent->branch_id);
+                $skipped = $unmapped + $result['skipped'];
+                $batch = AttendanceSyncBatch::create(['attendance_sync_agent_id' => $agent->id, 'batch_id' => $data['batch_id'], 'accepted_count' => count($data['logs']) - $skipped, 'skipped_count' => $skipped, 'updated_days' => $result['days']]);
                 $agent->forceFill(['last_heartbeat_at' => now(), 'last_sync_at' => now(), 'last_error' => null])->save();
                 return $batch;
             });
