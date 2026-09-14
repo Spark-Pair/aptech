@@ -22,6 +22,7 @@ class AttendanceAgentApiTest extends TestCase {
  public function test_user_sync_requires_bearer_token():void{$this->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[]])->assertUnauthorized();}
  public function test_user_sync_rejects_wrong_device_identifier():void{$this->agent();$this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'wrong','users'=>[['userid'=>1,'name'=>'Hasan']]])->assertForbidden();}
  public function test_user_sync_validates_payload():void{$this->agent();$this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[['userid'=>0,'name'=>str_repeat('x',256)]]])->assertUnprocessable()->assertJsonValidationErrors(['users.0.userid','users.0.name']);}
+ public function test_user_sync_rejects_unassigned_agent():void{$agent=$this->agent();$agent->update(['branch_id'=>null]);$this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[['userid'=>1,'name'=>'Hasan']]])->assertStatus(409)->assertJson(['message'=>'Attendance agent is not assigned to a branch.']);$this->assertDatabaseCount('attendance_device_users',0);}
  public function test_user_sync_creates_missing_employee_and_mapping():void{
   $agent=$this->agent(); $this->travelTo(\Carbon\CarbonImmutable::parse('2026-09-13 14:46:15',config('app.timezone')));
   $this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[['userid'=>1,'name'=>'Hasan']]])->assertOk()->assertJson(['created'=>1,'existing'=>0,'skipped'=>0,'branch_id'=>$agent->branch_id]);
@@ -55,10 +56,10 @@ class AttendanceAgentApiTest extends TestCase {
   $this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'mapped-batch-1','device_identifier'=>'zk-office-1','logs'=>[['id'=>7,'timestamp'=>'2026-09-13 14:18:42','type'=>5]]])->assertOk()->assertJson(['accepted'=>1,'skipped'=>0,'branch_id'=>$agent->branch_id]);
   $this->assertDatabaseHas('attendances',['branch_id'=>$agent->branch_id,'empid'=>500,'date'=>'2026-09-13','status'=>'Present']);
  }
- public function test_unmapped_device_user_is_skipped_not_attached_to_same_empid():void{
+ public function test_unmapped_device_user_returns_retryable_conflict_without_acknowledging_batch():void{
   $agent=$this->agent(); $this->employee(7,'Unrelated Employee');
-  $this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'unmapped-batch-1','device_identifier'=>'zk-office-1','logs'=>[['id'=>7,'timestamp'=>'2026-09-10 09:00:00','type'=>0]]])->assertOk()->assertJson(['accepted'=>0,'skipped'=>1,'updated_days'=>0]);
-  $this->assertDatabaseCount('attendances',0);
+  $this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'unmapped-batch-1','device_identifier'=>'zk-office-1','logs'=>[['id'=>7,'timestamp'=>'2026-09-10 09:00:00','type'=>0]]])->assertStatus(409)->assertJson(['code'=>'device_users_not_synced','unmapped_user_ids'=>['7']]);
+  $this->assertDatabaseCount('attendances',0); $this->assertDatabaseCount('attendance_sync_batches',0);
  }
  public function test_successful_batch_is_idempotent_on_replay():void{
   $agent=$this->agent(); $employee=$this->employee(); $this->map($agent,$employee,'101'); $payload=['batch_id'=>'stable-batch-1','device_identifier'=>'zk-office-1','logs'=>[['id'=>101,'timestamp'=>'2026-09-10 09:00:00','type'=>0],['id'=>101,'timestamp'=>'2026-09-10 17:00:00','type'=>1]]];
