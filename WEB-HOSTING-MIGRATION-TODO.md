@@ -27,10 +27,10 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [~] Actual Hostinger verification: PHP 8.2.33 and required extensions confirmed; Laravel 10.48.28 runs in production mode with debug off, HTTPS APP_URL, file cache/session and sync queue. Live project currently sits under `public_html` with an internal rewrite to `public/`; sensitive-path checks passed, but preferred document-root isolation review remains.
 - [x] Hostinger database connectivity verified against MariaDB 11.8.9 at `127.0.0.1`.
 - [x] Isolated Hostinger MariaDB test database `u617460922_aptech_test` and separate `~/aptech-mariadb-test` checkout verified; production DB is not used by the regression checkout.
-- [x] MariaDB clean migration regression passed after adding a dedicated `empid` index before replacing the legacy attendance unique key; both branch and device-user migrations complete successfully.
-- [x] Full automated regression on Hostinger MariaDB after unmapped-user retry fix passed: 57 tests, 235 assertions, 0 failures.
+- [x] MariaDB clean migration regression passed after adding a dedicated `empid` index before replacing the legacy attendance unique key; branch, device-user, and employee-sequence migrations complete successfully.
+- [x] Full automated regression on Hostinger MariaDB after allocator hardening passed: 58 tests, 239 assertions, 0 failures.
 - [x] Production SQLite -> MariaDB transfer and integrity verification completed previously; rollback artifacts retained outside webroot.
-- [!] Do not deploy the new branch/device-identity migrations to production until allocator hardening regression and physical branch verification are completed.
+- [!] Do not deploy the new branch/device-identity migrations to production until SQLite regression and physical branch verification are completed.
 
 ## Local Sync Agent
 - [x] Windows-first PHP CLI MVP; external gitignored config and configurable device/API parameters.
@@ -58,10 +58,10 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Attendance page supports All Branches / specific branch filtering and shows branch on rows.
 - [x] Report UI/controller/export carry branch filters and branch columns; Local Sync Agent status includes branch name.
 - [x] Legacy direct-device fetch is pinned to Main Branch during staged transition so it cannot create unassigned attendance.
-- [x] Full Hostinger MariaDB regression after retry-safety patch passed: 57 tests, 235 assertions.
-- [x] Concurrent device-user creation now uses a single row-lock-backed employee-ID allocator and re-checks the agent mapping after acquiring the lock, preventing duplicate allocation and orphan employees from competing agent requests.
+- [x] Concurrent device-user creation uses a single row-lock-backed employee-ID allocator and re-checks the agent mapping after acquiring the lock, preventing duplicate allocation and orphan employees from competing agent requests.
 - [x] Allocator advances past employee IDs created manually after sequence initialization; regression coverage added.
-- [ ] Re-run SQLite and Hostinger MariaDB regressions for the allocator migration/service changes.
+- [x] Hostinger MariaDB clean migration + full allocator regression passed: 58 tests, 239 assertions.
+- [ ] Re-run SQLite regression for the allocator migration/service changes.
 - [ ] Physically verify two-agent/same-device-user-ID behavior before production multi-branch use.
 
 ## UI/status
@@ -74,11 +74,12 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Attendance Agent API runtime checks passed, including successful batch replay/idempotency and branch/device-user mapping.
 - [x] Local Agent poison-batch handling, retry classification, device timezone handling, durable fingerprints, ACK tracking and cleanup dry-run implemented.
 - [x] Installed Rats/ZKTeco library inspected: full attendance reads and bulk `clearAttendance()` only; no per-record delete API found.
-- [x] End-to-end real path physically passed: ZKTeco -> Windows Local Agent -> HTTPS -> Hostinger Laravel API -> AttendanceImporter -> MariaDB.
+- [x] End-to-end real path physically passed: ZKTeco -> Windows Local Agent -> HTTPS -> AttendanceImporter -> MariaDB.
 - [x] Production physical test auto-created device users and persisted attendance; continuous polling/dedup physically observed.
 - [x] Cleanup dry-run physically reviewed; destructive cleanup remains disabled while unresolved rows exist.
 - [x] At-logon background scheduled worker physically ran successfully before startup-mode change.
-- [ ] Re-run automated regression after allocator hardening.
+- [x] Hostinger MariaDB automated regression after allocator hardening passed: 58 tests / 239 assertions.
+- [ ] Re-run SQLite automated regression after allocator hardening.
 - [ ] Reinstall latest startup/SYSTEM task and verify after Windows reboot before login; confirm no visible terminal and fresh agent log/heartbeat.
 - [ ] Physically verify exact same-timestamp and delayed/backfilled older punches.
 - [ ] Approve/implement any destructive device bulk-clear threshold separately; never clear while unresolved/pending/dead-letter/ambiguous rows exist.
@@ -92,9 +93,10 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Client deployment direction documented: future one-click installer should provision using a one-time code, not ship long-lived API credentials.
 - [x] Multi-branch collision review found global ZKTeco userid assumption unsafe; branch-safe agent/device-user mapping layer implemented before production migration.
 - [x] Attendance and report filters/status presentation updated for branch awareness without redesigning the UI.
-- [x] Hostinger MariaDB 11.8.9 regression after unmapped-user retry patch passed: 57 tests / 235 assertions.
+- [x] Unmapped attendance batches now remain retryable until device-user mappings exist.
 - [x] Device-user employee allocation hardened with a portable sequence table + transactional row lock + post-lock mapping re-check; stale sequence values skip already-used empids.
-- [~] Code is committed only to `web-hosting-sync`; `main`/`master` remain untouched. Allocator changes now require SQLite + Hostinger MariaDB regression before production migration.
+- [x] Hostinger MariaDB 11.8.9 clean migration and full post-hardening regression passed: 58 tests / 239 assertions / 0 failures.
+- [~] Code is committed only to `web-hosting-sync`; `main`/`master` remain untouched. SQLite regression + physical multi-branch/startup verification remain before production migration.
 
 ## Target
 ```text
