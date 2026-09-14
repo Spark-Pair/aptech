@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\Branch;
 use App\Models\Employee;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -14,55 +15,37 @@ class ReportController extends Controller
     private function data(Request $request): array
     {
         $validated = $request->validate([
-            'from' => ['nullable','date'],
-            'to' => ['nullable','date','after_or_equal:from'],
-            'employee' => ['nullable','integer'],
-            'statuses' => ['nullable','array'],
-            'statuses.*' => ['string','in:Present,Absent,Off Day,Leave'],
+            'from' => ['nullable','date'], 'to' => ['nullable','date','after_or_equal:from'],
+            'employee' => ['nullable','integer'], 'branch' => ['nullable','integer','exists:branches,id'],
+            'statuses' => ['nullable','array'], 'statuses.*' => ['string','in:Present,Absent,Off Day,Leave'],
         ]);
-
         $from = CarbonImmutable::parse($validated['from'] ?? now()->startOfMonth()->toDateString())->startOfDay();
         $to = CarbonImmutable::parse($validated['to'] ?? now()->endOfMonth()->toDateString())->endOfDay();
         $statuses = array_values(array_intersect(self::STATUSES, $validated['statuses'] ?? []));
         $employeeId = $validated['employee'] ?? null;
-        $periodLabel = $from->format('Y-m') === $to->format('Y-m')
-            ? $from->format('F Y')
-            : ($from->format('Y') === $to->format('Y')
-                ? $from->format('F').' – '.$to->format('F Y')
-                : $from->format('F Y').' – '.$to->format('F Y'));
+        $branchId = $validated['branch'] ?? null;
+        $branches = Branch::where('is_active', true)->orderBy('name')->get();
+        $selectedBranch = $branchId ? $branches->firstWhere('id', $branchId) : null;
+        $periodLabel = $from->format('Y-m') === $to->format('Y-m') ? $from->format('F Y') : ($from->format('Y') === $to->format('Y') ? $from->format('F').' – '.$to->format('F Y') : $from->format('F Y').' – '.$to->format('F Y'));
 
-        $query = Attendance::query()->with('employee.shift')
+        $query = Attendance::query()->with(['employee.shift','branch'])
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->when($branchId, fn($q) => $q->where('branch_id', $branchId))
             ->when($employeeId, fn($q) => $q->where('empid', $employeeId))
             ->when($statuses, fn($q) => $q->whereIn('status', $statuses));
 
-        $records = (clone $query)->orderBy('date')->orderBy('empid')->get();
+        $records = (clone $query)->orderBy('date')->orderBy('branch_id')->orderBy('empid')->get();
         $selectedEmployee = $employeeId ? Employee::with('shift')->where('empid', $employeeId)->first() : null;
         $summary = collect(self::STATUSES)->mapWithKeys(fn($status) => [$status => $records->where('status', $status)->count()])->all();
-        $present = $records->where('status','Present');
-        $working = $records->whereNotIn('status',['Off Day'])->count();
-        $totals = [
-            'Total Records' => $records->count(),
-            'Employees' => $records->pluck('empid')->unique()->count(),
-            'Working Days' => $working,
-            'Late Min' => $present->sum(fn($r)=>(int)($r->late_minutes ?? 0)),
-            'Early Min' => $present->sum(fn($r)=>(int)($r->early_minutes ?? 0)),
-            'Attendance %' => $working ? round(($summary['Present'] / $working) * 100, 1) : 0,
-        ];
+        $present = $records->where('status','Present'); $working = $records->whereNotIn('status',['Off Day'])->count();
+        $totals = ['Total Records'=>$records->count(),'Employees'=>$records->pluck('empid')->unique()->count(),'Working Days'=>$working,'Late Min'=>$present->sum(fn($r)=>(int)($r->late_minutes??0)),'Early Min'=>$present->sum(fn($r)=>(int)($r->early_minutes??0)),'Attendance %'=>$working?round(($summary['Present']/$working)*100,1):0];
 
         $employeeRows = $records->groupBy('empid')->map(function($rows) {
-            $employee = $rows->first()->employee; $working = $rows->where('status','!=','Off Day')->count(); $present = $rows->where('status','Present');
-            return (object)[
-                'empid'=>$rows->first()->empid,'name'=>$employee?->name ?? 'Unknown','department'=>$employee?->department ?? '—','designation'=>$employee?->designation ?? '—','shift'=>$employee?->shift?->name ?? '—',
-                'present'=>$present->count(),'absent'=>$rows->where('status','Absent')->count(),'leave'=>$rows->where('status','Leave')->count(),'off'=>$rows->where('status','Off Day')->count(),
-                'late'=>$present->sum(fn($r)=>(int)($r->late_minutes ?? 0)),'early'=>$present->sum(fn($r)=>(int)($r->early_minutes ?? 0)),'percentage'=>$working ? round(($present->count()/$working)*100,1) : 0,
-            ];
+            $employee=$rows->first()->employee; $working=$rows->where('status','!=','Off Day')->count(); $present=$rows->where('status','Present');
+            return (object)['empid'=>$rows->first()->empid,'name'=>$employee?->name??'Unknown','department'=>$employee?->department??'—','designation'=>$employee?->designation??'—','shift'=>$employee?->shift?->name??'—','present'=>$present->count(),'absent'=>$rows->where('status','Absent')->count(),'leave'=>$rows->where('status','Leave')->count(),'off'=>$rows->where('status','Off Day')->count(),'late'=>$present->sum(fn($r)=>(int)($r->late_minutes??0)),'early'=>$present->sum(fn($r)=>(int)($r->early_minutes??0)),'percentage'=>$working?round(($present->count()/$working)*100,1):0];
         })->values();
 
-        return compact('from','to','periodLabel','statuses','records','selectedEmployee','summary','totals','employeeRows') + [
-            'employees'=>Employee::with('shift')->where('is_active',true)->orderBy('name')->get(),
-            'availableStatuses'=>self::STATUSES,
-        ];
+        return compact('from','to','periodLabel','statuses','records','selectedEmployee','summary','totals','employeeRows','branches','selectedBranch') + ['employees'=>Employee::with('shift')->where('is_active',true)->orderBy('name')->get(),'availableStatuses'=>self::STATUSES];
     }
 
     public function index(Request $request) { return view('reports.index', $this->data($request)); }
@@ -70,23 +53,16 @@ class ReportController extends Controller
     public function csv(Request $request)
     {
         $data=$this->data($request); $records=$data['records']; $filename='attendance-report-'.$data['from']->format('Ymd').'-'.$data['to']->format('Ymd').'.csv';
-        return response()->streamDownload(function() use($records){ $out=fopen('php://output','w'); fputcsv($out,['S.No','Date','Employee ID','Employee','Department','Designation','Shift','Status','Check In','Check Out','Working Hours','Late Min','Early Min']); foreach($records as $i=>$r) fputcsv($out,[$i+1,$r->date?->format('Y-m-d'),$r->empid,$r->employee?->name,$r->employee?->department,$r->employee?->designation,$r->employee?->shift?->name,$r->status,$r->check_in?->format('H:i'),$r->check_out?->format('H:i'),$r->working_hours,$r->late_minutes??0,$r->early_minutes??0]); fclose($out); },$filename,['Content-Type'=>'text/csv; charset=UTF-8']);
+        return response()->streamDownload(function() use($records){ $out=fopen('php://output','w'); fputcsv($out,['S.No','Branch','Date','Employee ID','Employee','Department','Designation','Shift','Status','Check In','Check Out','Working Hours','Late Min','Early Min']); foreach($records as $i=>$r) fputcsv($out,[$i+1,$r->branch?->name??'Unassigned',$r->date?->format('Y-m-d'),$r->empid,$r->employee?->name,$r->employee?->department,$r->employee?->designation,$r->employee?->shift?->name,$r->status,$r->check_in?->format('H:i'),$r->check_out?->format('H:i'),$r->working_hours,$r->late_minutes??0,$r->early_minutes??0]); fclose($out); },$filename,['Content-Type'=>'text/csv; charset=UTF-8']);
     }
 
     public function excel(Request $request)
     {
-        $data=$this->data($request); $records=$data['records'];
-        $rows=[];
-        $rows[]=['Attendance Report - '.$data['periodLabel']];
-        $rows[]=['Month / Period',$data['periodLabel']];
-        $rows[]=['Date Range',$data['from']->format('d M Y').' - '.$data['to']->format('d M Y')];
-        $rows[]=['Employee',$data['selectedEmployee'] ? $data['selectedEmployee']->name.' ('.$data['selectedEmployee']->empid.')' : 'All Employees'];
-        $rows[]=['Statuses',$data['statuses'] ? implode(', ',$data['statuses']) : 'All Statuses'];
-        $rows[]=[];
-        $rows[]=['S.No','Date','Employee ID','Employee','Department','Designation','Shift','Status','Check In','Check Out','Working Hours','Late Min','Early Min'];
-        foreach($records as $i=>$r) $rows[]=[$i+1,$r->date?->format('Y-m-d'),$r->empid,$r->employee?->name,$r->employee?->department,$r->employee?->designation,$r->employee?->shift?->name,$r->status,$r->check_in?->format('H:i'),$r->check_out?->format('H:i'),$r->working_hours,$r->late_minutes??0,$r->early_minutes??0];
-        $html='<html><head><meta charset="UTF-8"></head><body><table border="1">'; foreach($rows as $row){ $html.='<tr>'; foreach($row as $cell) $html.='<td>'.htmlspecialchars((string)$cell,ENT_QUOTES,'UTF-8').'</td>'; $html.='</tr>'; } $html.='</table></body></html>';
-        $filename='attendance-report-'.$data['from']->format('Ymd').'-'.$data['to']->format('Ymd').'.xls';
-        return response($html,200,['Content-Type'=>'application/vnd.ms-excel; charset=UTF-8','Content-Disposition'=>'attachment; filename="'.$filename.'"']);
+        $data=$this->data($request); $records=$data['records']; $rows=[];
+        $rows[]=['Attendance Report - '.$data['periodLabel']]; $rows[]=['Month / Period',$data['periodLabel']]; $rows[]=['Date Range',$data['from']->format('d M Y').' - '.$data['to']->format('d M Y')]; $rows[]=['Branch',$data['selectedBranch']?->name ?? 'All Branches']; $rows[]=['Employee',$data['selectedEmployee']?$data['selectedEmployee']->name.' ('.$data['selectedEmployee']->empid.')':'All Employees']; $rows[]=['Statuses',$data['statuses']?implode(', ',$data['statuses']):'All Statuses']; $rows[]=[];
+        $rows[]=['S.No','Branch','Date','Employee ID','Employee','Department','Designation','Shift','Status','Check In','Check Out','Working Hours','Late Min','Early Min'];
+        foreach($records as $i=>$r) $rows[]=[$i+1,$r->branch?->name??'Unassigned',$r->date?->format('Y-m-d'),$r->empid,$r->employee?->name,$r->employee?->department,$r->employee?->designation,$r->employee?->shift?->name,$r->status,$r->check_in?->format('H:i'),$r->check_out?->format('H:i'),$r->working_hours,$r->late_minutes??0,$r->early_minutes??0];
+        $html='<html><head><meta charset="UTF-8"></head><body><table border="1">'; foreach($rows as $row){$html.='<tr>';foreach($row as $cell)$html.='<td>'.htmlspecialchars((string)$cell,ENT_QUOTES,'UTF-8').'</td>';$html.='</tr>';}$html.='</table></body></html>';
+        return response($html,200,['Content-Type'=>'application/vnd.ms-excel; charset=UTF-8','Content-Disposition'=>'attachment; filename="attendance-report-'.$data['from']->format('Ymd').'-'.$data['to']->format('Ymd').'.xls"']);
     }
 }
