@@ -9,10 +9,15 @@ if ($null -eq $task) {
 }
 
 $info = Get-ScheduledTaskInfo -TaskName $taskName
+$triggerType = if ($task.Triggers.Count -gt 0) { $task.Triggers[0].CimClass.CimClassName } else { "None" }
 
 [PSCustomObject]@{
     TaskName       = $task.TaskName
     State          = $task.State
+    RunAs          = $task.Principal.UserId
+    LogonType      = $task.Principal.LogonType
+    RunLevel       = $task.Principal.RunLevel
+    TriggerType    = $triggerType
     LastRunTime    = $info.LastRunTime
     LastTaskResult = $info.LastTaskResult
     NextRunTime    = $info.NextRunTime
