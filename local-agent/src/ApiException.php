@@ -37,7 +37,13 @@ class ApiException extends RuntimeException
             $message .= ' '.$summary;
         }
 
-        return new self($statusCode, self::classifyStatus($statusCode), $message, $safeBody);
+        $classification = self::classifyStatus($statusCode);
+        $decoded = json_decode($safeBody, true);
+        if ($statusCode === 409 && is_array($decoded) && ($decoded['code'] ?? null) === 'device_users_not_synced') {
+            $classification = self::TRANSIENT;
+        }
+
+        return new self($statusCode, $classification, $message, $safeBody);
     }
 
     public static function classifyStatus(int $statusCode): string
