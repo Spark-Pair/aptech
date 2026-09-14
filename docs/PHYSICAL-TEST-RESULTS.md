@@ -2,100 +2,88 @@
 
 Status: **PARTIALLY EXECUTED**. Environment-dependent roadmap items stay pending unless actual physical results are listed below.
 
-Record when testing begins: date/environment; Hostinger/staging PHP + MySQL versions; ZKTeco model/firmware; anonymized device attendance row shape; automated test result; MySQL migrate/seed result; heartbeat/sync result; offline/retry/restart/transport-idempotency result; device checkpoint/same-timestamp/backfill result; UI regression result; corrective commits; final pass/fail decision.
-
 ## Physical results reported 2026-09-13
 
 Physically passed:
 - Windows PHP prerequisites passed on PHP 8.2.28.
-- PHP extensions/capabilities verified: sockets, curl, pdo_sqlite, sqlite3 and Composer autoload.
-- Windows PC `192.168.100.13` can reach ZKTeco `192.168.100.19:4370`; `Test-NetConnection` returned `TcpTestSucceeded : True`.
-- Local ZKTeco PHP library connected to the real attendance machine.
-- Local Agent read actual attendance rows from the device.
-- Windows Local Agent reached the production HTTPS heartbeat API.
-- Production Operations UI showed `Office Agent` as Online for device `zk-office-1`.
-- ZKTeco machine clock problem was identified: old rows were approximately seven days in the future.
-- ZKTeco machine date/time was corrected.
-- A new real punch was observed with correct local timestamp `2026-09-13 14:18:42`.
+- Windows PC can reach the real ZKTeco device on port 4370 and the PHP library connects successfully.
+- Windows Local Agent reached the production HTTPS heartbeat/sync API.
+- Production Operations UI showed the provisioned Office Agent online.
+- A ZKTeco clock problem was identified and the machine date/time was corrected.
+- Stale future-dated rows remained in device memory and are correctly rejected before batching.
 
-Issue physically observed:
-- Stale future-dated rows remain stored in ZKTeco memory, including `2026-09-20 13:03:04` and `2026-09-20 13:25:49`.
-- The Local Agent included stale future rows and the valid `2026-09-13 14:18:42` row in the same sync attempt.
-- Laravel correctly returned HTTP 422 for the future timestamp.
-- The invalid future row poisoned the whole outgoing batch, preventing the valid row from syncing.
-
-Automated verification after code fix:
-- `vendor\bin\phpunit --configuration phpunit.xml --filter LocalAgentTest`: 10 tests, 18 assertions, passed.
-- `vendor\bin\phpunit --configuration phpunit.xml --filter AttendanceAgentApiTest`: 7 tests, 15 assertions, passed.
-- `vendor\bin\phpunit --configuration phpunit.xml`: 33 tests, 140 assertions, passed.
-
-## Physical Local Agent cycle on 2026-09-13
-
-One controlled Local Agent cycle was run against the physical ZKTeco device.
-
-Passed:
-- Invalid future rows uid `50` (`2026-09-20 13:03:04`) and uid `51` (`2026-09-20 13:25:49`) were detected by the pre-batch filter and skipped with `reason=future_timestamp`.
-
-Failed / bug found:
-- Valid uid `52` (`2026-09-13 14:18:42`) was incorrectly classified as `future_timestamp`.
-- The agent log timestamp was UTC (`2026-09-13T09:46:15+00:00`), while the ZKTeco row was Pakistan local wall-clock time. The row was about 27 minutes old in `Asia/Karachi`, not future.
-- Production attendance sync is still not physically passed.
-
-Automated verification after timezone fix:
-- `vendor\bin\phpunit --configuration phpunit.xml --filter LocalAgentTest`: 11 tests, 23 assertions, passed.
-- `vendor\bin\phpunit --configuration phpunit.xml --filter AttendanceAgentApiTest`: 8 tests, 19 assertions, passed.
-- `vendor\bin\phpunit --configuration phpunit.xml`: 35 tests, 147 assertions, passed.
-
-## Attendance transport passed before production cleanup
+## Attendance transport
 
 Physically verified:
 - Stale future rows uid `50` and uid `51` were skipped.
 - Valid uid `52` timestamp `2026-09-13 14:18:42` synced through Windows Local Agent -> HTTPS -> Hostinger Laravel API -> `AttendanceImporter` -> MariaDB.
-- Production attendance count increased from 47 to 48.
-- The accepted sync batch reported `accepted_count=1`.
+- Production attendance count increased from 47 to 48 in that controlled test and the accepted sync batch reported `accepted_count=1`.
 - Production MariaDB insert was verified.
 
-After that verification, production business/test data was intentionally cleaned. Current production business counts were reported as: users `1`, attendance sync agents `1`, attendance sync batches `0`, attendances `0`, employees `0`, shifts `0`. The existing Office Agent remains the agent credential to use for the next test.
+After that verification, production business/test data was intentionally cleaned while retaining the login user and Office Agent credential.
 
-## Physical device user read on 2026-09-13
+## Device user synchronization
 
 Physically verified:
-- A real ZKTeco `getUser()` call succeeded.
-- The current physical device returned one user with `userid=1` and `name=Hasan`.
+- Real ZKTeco `getUser()` calls succeeded.
+- Local Agent sends only the safe `userid` and `name` fields; device password/card/role/uid/biometric data are not sent by the user-sync payload.
+- Production later showed two automatically created employees from the physical device: `userid=1`, `name=Hasan` -> Laravel `empid=1`, and `userid=2`, `name=Hassan` -> Laravel `empid=2`.
+- Both employees used the expected generated `device_1` / `device_2` usernames and non-destructive business defaults.
 
-Security note:
-- The raw device API also exposes security-sensitive fields. The Local Agent deliberately discards those fields and only sends `userid` and `name` for user sync.
+## Continuous Local Agent
 
-New feature implemented, not yet physically verified:
-- Automatic non-destructive Device User -> Employee synchronization.
-- Expected first production verification after pulling this change: device `userid=1`, `name=Hasan` creates one Laravel employee with `empid=1`, `name=Hasan`.
-- Automated verification after user-sync implementation: `vendor\bin\phpunit --configuration phpunit.xml` passed with 45 tests and 196 assertions.
+Physically verified:
+- `php local-agent/agent.php --run` operated continuously against the real device.
+- The device returned full historical attendance on every poll, while the Local Agent fingerprint state prevented unchanged historical rows from being re-posted (`new rows=0` on unchanged cycles).
+- Repeated cycles showed `pending batches=0`.
+- With 10 device rows, typical observed cycle duration was roughly 0.86-0.97 seconds, with occasional slower cycles around 1.6-2.3 seconds. The configured sleep remains 5 seconds between cycles.
+- Production MariaDB showed attendance for both physical device employees. Multiple punches aggregate into the existing employee/business-date attendance model rather than creating one database attendance row per raw punch.
 
-## Local Agent hardening after user sync
+## Cleanup dry-run
 
-Static library inspection:
-- `Rats\Zkteco\Lib\Helper\Attendance::get()` uses `CMD_ATT_LOG_RRQ`, documented as reading all attendance records.
-- The installed library exposes `clearAttendance()` / `CMD_CLEAR_ATT_LOG`, documented as clearing all attendance records.
-- No per-record attendance delete or delete-through-position API was found in the installed library.
+Physically verified dry-run output:
+- device rows: `7`
+- ACKed rows: `5`
+- pending rows: `0`
+- unresolved rows: `2`
+- cleanup eligible rows: `0`
+- capability: `bulk_clear_all_only`
+- cleanup enabled: `false`
 
-Implemented but not physically verified:
-- Continuous Local Agent mode with `--run` and configurable `poll_interval_seconds` defaulting to 5 seconds.
-- One-cycle diagnostic mode with `--once`.
-- Non-destructive `--cleanup-dry-run` diagnostics.
-- Durable local attendance record fingerprints so duplicate historical `getAttendance()` responses are not re-posted every cycle.
-- ACK-based local cleanup eligibility tracking in SQLite; a record becomes ACKed only after a confirmed Laravel API acknowledgement or idempotent replay acknowledgement.
-- Local acknowledged-history pruning for SQLite metadata only; pending and dead-letter records are preserved.
-- Automated verification after continuous-agent hardening: `vendor\bin\phpunit --configuration phpunit.xml` passed with 55 tests and 221 assertions.
+The two unresolved rows correspond to stale future-dated device attendance. The safety gate therefore correctly prevented cleanup eligibility.
+
+Static library/device capability finding:
+- Attendance reads use the full attendance log request.
+- The installed Rats/ZKTeco library exposes bulk `clearAttendance()` / clear-all only.
+- No per-record or delete-through-position attendance cleanup API was found.
 
 Safety gate:
 - Real device attendance deletion remains disabled.
-- Because the library is bulk-clear-only, no real-device cleanup should be enabled until dry-run output is reviewed on the physical device and a bulk-clear threshold strategy is explicitly approved.
+- Never bulk-clear while any device row is pending, unresolved, dead-lettered or otherwise ambiguous.
+- Exact rolling 24/48-hour retention on the physical device cannot be implemented with the currently available clear-all-only API; recent ACK metadata can be retained safely in Local Agent SQLite instead.
 
-Not yet physically passed:
-- Automatic user creation on production.
-- Continuous `--run` operation on the Windows agent.
-- Device cleanup dry-run output on the real ZKTeco.
-- Any real ZKTeco attendance deletion or bulk clear.
+## Background Windows worker
+
+Implemented after the successful continuous physical test:
+- `local-agent/install-task.ps1` now installs the actual continuous `agent.php --run` worker instead of launching a one-cycle process every minute.
+- The installer resolves PHP to an absolute path, runs the prerequisite checker, validates one real `--once` cycle before installation, registers an at-logon task, prevents overlapping instances, removes the execution time limit, configures restart-on-failure and starts the task immediately.
+- `local-agent/status-task.ps1` reports task state/result/action and recent Local Agent logs.
+- `local-agent/uninstall-task.ps1` stops a running worker before unregistering the task while preserving config/state/logs.
+- This scheduled-task installation itself still requires physical Windows verification after pulling the implementation.
+
+## Automated verification history
+
+- Poison-row fix: Local Agent 10 tests / 18 assertions; API 7 / 15; full suite 33 / 140.
+- Device timezone fix: Local Agent 11 / 23; API 8 / 19; full suite 35 / 147.
+- Device user sync: full suite 45 tests / 196 assertions.
+- Continuous-agent hardening: full suite 55 tests / 221 assertions.
+
+The background-task PowerShell changes were made through the GitHub connector and have not yet been executed by the test runner in this session; physical Windows installation/status verification is the next gate.
+
+## Still pending physical verification
+
 - Exact same-timestamp punches on the physical device.
 - Delayed/backfilled older punches on the physical device.
-- Physical outage, restart and replay scenarios not explicitly listed as passed above.
+- Explicit internet outage, response-loss/idempotent replay and restart recovery scenarios not already demonstrated.
+- Windows background scheduled-task installation/reboot-or-logon persistence after the latest task changes.
+- Any real ZKTeco attendance deletion or bulk clear.
