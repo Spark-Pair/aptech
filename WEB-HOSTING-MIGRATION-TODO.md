@@ -6,7 +6,7 @@
 Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 
 ## Locked
-- [x] Same UI/UX; modular/reusable architecture; realtime/AJAX feel; no unnecessary reloads.
+- [x] Same UI/UX; modular/reusable architecture; no browser realtime/polling requirement; users may refresh for latest attendance.
 - [x] Production Laravel = MySQL on Hostinger-compatible shared hosting.
 - [x] After Local Agent cutover, hosted Laravel never directly accesses ZKTeco/private LAN.
 
@@ -37,12 +37,15 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] ZKTeco sockets only on office PC; outbound HTTPS only.
 - [x] Durable agent-only SQLite queue/checkpoint, UUID transport idempotency, capped retries/pending replay.
 - [x] Heartbeat, safe rotating diagnostics and acknowledged timestamp.
-- [x] Windows Task Scheduler install/uninstall helpers; prerequisite gate, overlap prevention, execution ceiling.
+- [x] Windows Task Scheduler helpers now support one continuous `--run` worker with overlap prevention, no execution ceiling and restart-on-failure.
+- [x] Startup installer now registers the worker at Windows boot under LocalSystem/SYSTEM with no interactive login or terminal window required; elevation is required at install time.
+- [x] Status helper reports task identity/trigger/runtime details and recent agent logs; uninstall preserves config/state/logs.
 - [x] Prerequisite checker validates PHP 8.1+, sockets, curl, pdo_sqlite, sqlite3 and Composer autoload.
 - [x] Setup/security/recovery guide + expanded physical failure/replay/checkpoint test plan and result log.
-- [~] Timestamp checkpoint/device-log identity provisional until same-timestamp/backfill behavior verified; separate from transport idempotency.
-- [ ] Execute physical ZKTeco test plan and record actual response shape/results.
-- [ ] Refine non-technical installer after real-device test.
+- [x] Physical user creation, multi-user attendance persistence and continuous polling through Hostinger MariaDB passed.
+- [~] New boot-time SYSTEM deployment mode implemented but requires physical reboot/no-login verification on Windows.
+- [~] Timestamp/device-log identity: automated same-timestamp/backfill coverage exists; exact physical edge verification remains.
+- [ ] Build/refine non-technical client installer + one-time provisioning flow after startup mode is physically verified. Installer must not embed long-lived API tokens.
 
 ## UI/status
 - [x] Existing AJAX layer retained; no SPA rewrite.
@@ -53,69 +56,41 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Existing portal AJAX layer escapes server status values and reloads status when Operations is entered through AJAX navigation.
 - [x] Server-side runtime coverage verifies status auth, Operations status hook, online/offline health, error fields and token-hash non-disclosure on SQLite and MySQL.
 - [x] Browser verification passed: no background status request repeats while remaining on Operations; navigating away and back through AJAX triggers exactly one fresh status request.
-- [x] Post-cutover production browser verification confirms authenticated Operations page renders successfully from the deployed `web-hosting-sync` code and shows the expected no-agent-provisioned state.
+- [x] Post-cutover production browser verification confirms authenticated Operations page renders successfully from the deployed `web-hosting-sync` code.
+- [x] Browser realtime/WebSocket/SSE attendance updates explicitly dropped from scope; normal refresh is acceptable.
 
 ## Cutover/testing
-- [x] Windows SQLite regression is deterministic after throttle-isolation fix: two consecutive runs each passed 22 tests / 119 assertions on 2026-09-12 (12.36s and 11.13s).
-- [x] Windows MySQL 8.0.46 regression is green after throttle-isolation fix on disposable `aptech_test`: 22 tests / 119 assertions on 2026-09-12 (14.004s).
+- [x] Windows SQLite regression is deterministic after throttle-isolation fix: two consecutive runs each passed 22 tests / 119 assertions on 2026-09-12.
+- [x] Windows MySQL 8.0.46 regression passed: 22 tests / 119 assertions.
 - [x] Attendance Agent API runtime checks pass, including successful batch replay/idempotency.
-- [x] Successful sync replay/idempotency test has explicit employee fixture, uses machine `empid`, verifies one sync batch and imported attendance.
-- [x] Local Agent poison-batch handling implemented: invalid/malformed/future device rows are skipped before batching with safe diagnostics, and stale future rows no longer advance the acknowledged timestamp checkpoint.
-- [x] Local Agent API failure handling distinguishes success, transient failures, permanent payload failures and auth/config failures; permanent queued payload failures are moved out of the active retry queue into SQLite dead-letter storage.
-- [x] Local Agent timestamp validation corrected to parse ZKTeco wall-clock timestamps in a configured IANA device timezone instead of relying on PHP's default timezone.
-- [x] Automatic non-destructive Device User -> Employee synchronization implemented. Local Agent sends only safe fields (`userid`, `name`) and Laravel creates missing employees by `employees.empid = ZKTeco userid`.
-- [x] User-sync automated coverage passed with the full SQLite suite: 45 tests / 196 assertions.
-- [x] Local Agent continuous mode implemented with `--run`, one-cycle diagnostics with `--once`, and non-destructive cleanup diagnostics with `--cleanup-dry-run`.
-- [x] Installed Rats/ZKTeco library inspected: attendance reads return the full log; cleanup support is bulk `clearAttendance()` only, with no per-record delete API found.
-- [x] Local Agent now tracks durable attendance record fingerprints and ACK status in SQLite so duplicate historical reads, same-timestamp rows and delayed older rows are not filtered solely by timestamp.
-- [x] Real device attendance cleanup remains disabled by default and dry-run only pending physical review.
-- [ ] End-to-end Agent -> real ZKTeco -> API -> MySQL.
-- [x] UI regression for Local Sync Agent status: server-side coverage plus browser on-demand/AJAX navigation behavior passed; continuous polling absent.
-- [x] Staged-cutover rule documented: Local Agent existence alone never removes legacy direct-device code.
-- [x] Hostinger HTTPS smoke test passes directly on `45.84.206.232`: root and `www` return 302 to `/login` from LiteSpeed/Hostinger.
-- [x] Public DNS A records were changed to `45.84.206.232`; Google and Cloudflare public resolvers both returned the new Hostinger IP during propagation verification. A stale resolver on the Hostinger SSH environment temporarily continued reaching the old Nginx host, so the old server remains available during transition.
+- [x] Local Agent poison-batch handling filters invalid/malformed/future rows before batching.
+- [x] Local Agent API failures distinguish transient, permanent payload and auth/config failures; permanent queued failures move to dead-letter storage.
+- [x] Device timestamps are interpreted using configured IANA `device_timezone` (Pakistan deployment: `Asia/Karachi`).
+- [x] Automatic non-destructive Device User -> Employee sync sends only `userid` and `name` and creates missing employees by `employees.empid = ZKTeco userid`.
+- [x] Local Agent continuous `--run`, diagnostic `--once`, durable record fingerprints, ACK tracking and `--cleanup-dry-run` implemented.
+- [x] Installed Rats/ZKTeco library inspected: full attendance reads and bulk `clearAttendance()` only; no per-record delete API found.
+- [x] End-to-end real path physically passed: ZKTeco -> Windows Local Agent -> HTTPS -> Hostinger Laravel API -> AttendanceImporter -> MariaDB.
+- [x] Production physical test auto-created device users 1/Hasan and 2/Hassan and persisted attendance for both.
+- [x] Continuous polling physically observed with unchanged history producing `new rows=0` and `pending batches=0`.
+- [x] Cleanup dry-run physically reviewed: 7 device rows, 5 ACKed, 0 pending, 2 unresolved future rows; destructive cleanup correctly remained ineligible/disabled.
+- [x] At-logon background scheduled worker physically ran successfully before startup-mode change.
+- [ ] Reinstall latest startup/SYSTEM task and verify after Windows reboot before login; confirm no visible terminal and fresh agent log/heartbeat.
+- [ ] Physically verify exact same-timestamp and delayed/backfilled older punches.
+- [ ] Approve/implement any destructive device bulk-clear threshold separately; never clear while unresolved/pending/dead-letter/ambiguous rows exist.
 - [ ] Only after replacement proves stable, disable/remove hosted ZKTeco socket/private-LAN dependency.
 - [ ] Final document-root review, physical-device verification, explicit approval, then merge.
 
-## Progress — 2026-09-12
-- [x] `web-hosting-sync` isolated; main/master untouched.
-- [x] Audit + secure API + Local Agent foundation completed.
-- [x] Agent diagnostics, hardened Windows scheduling, prerequisites, API/security docs, MySQL checklist, Hostinger guide, recovery/checkpoint test plan, result log and docs index added.
-- [x] Local Sync Agent status wired into existing Operations UI through authenticated endpoint.
-- [x] Attendance Agent API/idempotency runtime coverage passes.
-- [x] Employee detail and monthly Early/Late presentation regression coverage aligned with current UI without redesigning production views.
-- [x] Disposable MySQL 8.0.46 connection verified through PDO/Laravel; all nine migrations and seeding completed cleanly.
-- [x] Dedicated MySQL PHPUnit configuration added; it does not store the database password.
-- [x] Expanded status regression added: unauthenticated access, Operations status hook, online/offline calculation, health/error payload and token-hash non-disclosure.
-- [x] Browser confirmed initial Operations status request returns HTTP 200 and renders the no-agent state.
-- [x] User rejected continuous browser polling for shared-hosting load; 30-second timer removed. Status now fetches only when Operations loads/is entered.
-- [x] Repeated local runs exposed cache-backed route-throttle counters leaking between PHPUnit processes (`login` and legacy `fetchLogs` could return 429 before functional assertions).
-- [x] Test base disables only Laravel `ThrottleRequests` middleware during automated functional tests; production route throttles remain configured and unchanged.
-- [x] Post-fix SQLite verification completed twice consecutively: both runs 22/22 tests, 119 assertions.
-- [x] Post-fix MySQL 8.0.46 verification completed: 22/22 tests, 119 assertions using `phpunit.mysql.xml`.
-- [x] Browser on-demand status verification completed: no automatic repeat while idle; one fresh request when returning to Operations through AJAX navigation.
-- [x] Actual Hostinger runtime verified: PHP 8.2.33, required extensions present, Laravel 10.48.28, Composer 2.9.8, production/debug/driver settings suitable for shared hosting.
-- [x] Hostinger MariaDB 11.8.9 connection verified and all nine target migrations are Ran.
-- [x] Final pre-cutover SQLite snapshot retained; source and target business counts match 1 user / 1 shift / 2 employees / 47 attendances.
-- [x] Production data integrity checks passed with no orphan or duplicate attendance-day records.
-- [x] Live checkout switched to `web-hosting-sync` without merging `main/master`; production dependencies installed and Laravel cut over from SQLite to MariaDB successfully.
-- [x] Production caches rebuilt; application returned from maintenance mode with database driver `mysql`.
-- [x] Sensitive-path HTTP checks passed (`.env` 403, `composer.json` 404, `.git/config` 403).
-- [x] Hostinger direct HTTPS tests pass for root and `www`; public DNS resolvers now advertise Hostinger IP `45.84.206.232`.
-- [x] Authenticated browser smoke test reaches the deployed Operations page and renders Attendance Device Sync with `No Local Sync Agent has been provisioned yet.`
-- [x] Legacy hosted ZKTeco path intentionally preserved during physical Local Agent validation.
-- [x] Physical Local Agent testing identified a ZKTeco clock issue: stale rows with `2026-09-20` timestamps remained on the device after the clock was corrected, while a new valid punch returned `2026-09-13 14:18:42`.
-- [x] Local Agent poison-batch recovery added after physical observation that Laravel correctly rejected the mixed batch with HTTP 422.
-- [x] Automated verification after the fix on 2026-09-13: Local Agent unit coverage passed 10 tests / 18 assertions; Attendance Agent API coverage passed 7 tests / 15 assertions; full SQLite suite passed 33 tests / 140 assertions.
-- [x] Physical one-cycle retest showed uid 50 and uid 51 future rows were correctly filtered, but valid uid 52 `2026-09-13 14:18:42` was incorrectly rejected because the Local Agent compared Pakistan wall-clock device time against UTC default time.
-- [x] Local Agent device timestamp validation now uses configured `device_timezone` with default `Asia/Karachi`; regression coverage freezes UTC `2026-09-13T09:46:15+00:00` and accepts Pakistan wall-clock `2026-09-13 14:18:42` while rejecting `2026-09-20` rows. Full SQLite suite passes: 35 tests / 147 assertions.
-- [x] Attendance transport physically passed before cleanup: stale future rows skipped, valid uid 52 synced, production attendance count increased 47 -> 48, accepted sync batch count was 1, and MariaDB insert was verified.
-- [x] Production business/test data was intentionally cleaned after the transport test; current production counts were reported as users 1, agents 1, sync batches 0, attendances 0, employees 0, shifts 0.
-- [x] Real ZKTeco `getUser()` succeeded and returned one business user: `userid=1`, `name=Hasan`. The raw device API exposes security-sensitive fields, but the Local Agent deliberately discards them.
-- [x] Local Agent hardening added: continuous worker mode, full-history dedupe by durable record fingerprint, ACK-gated local state, bounded acknowledged metadata pruning and cleanup dry-run diagnostics. Full SQLite suite passes after implementation: 55 tests / 221 assertions.
-- [~] Next: pull automatic user sync and continuous-agent hardening to the Windows Local Agent; physically verify `userid=1` creates Laravel employee `empid=1`, run one controlled attendance cycle, then run cleanup dry-run diagnostics. Real device cleanup remains disabled. Same-timestamp and delayed/backfilled older punch behavior are covered by automated fingerprint tests but still need physical verification.
+## Progress — 2026-09-14
+- [x] Real background `--run` task installed and observed Running on Windows with PHP 8.2.28.
+- [x] Background cycle detected two new rows from 12 device rows, synced them with zero pending batches, then subsequent cycles correctly reported `new rows=0`.
+- [x] User confirmed browser realtime is not required; no WebSocket/SSE/browser polling work will be added.
+- [x] Startup deployment changed from `AtLogOn` current-user execution to `AtStartup` + built-in `SYSTEM` service-account execution, non-interactive and highest privilege.
+- [x] Installer now requires Administrator elevation and continues to validate prerequisites plus one real cycle before registration.
+- [x] Client deployment direction documented: future one-click installer should provision using a one-time code, not ship long-lived API credentials.
+- [~] Next physical check: pull latest `web-hosting-sync`, reinstall task elevated, confirm `RunAs=SYSTEM` and boot trigger, reboot PC, do not log in immediately, then verify server heartbeat/attendance or log after login.
+- [ ] Non-technical installer/provisioning implementation remains next after startup-mode verification.
 
 ## Target
 ```text
-ZKTeco LAN -> Windows Local Agent -> outbound HTTPS -> Laravel API -> AttendanceImporter -> MySQL -> existing AJAX UI
+ZKTeco LAN -> Windows Local Agent -> outbound HTTPS -> Laravel API -> AttendanceImporter -> MySQL -> existing AJAX UI (manual refresh for latest data)
 ```
