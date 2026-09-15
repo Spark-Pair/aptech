@@ -11,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 
 class AttendanceImporter
 {
+    private const FUTURE_SKEW_SECONDS = 300;
+
     /** Validate everything before writing; retain earliest IN and latest OUT on replay. */
     public function import(array $logs, ?int $branchId = null, ?string $deviceTimezone = null): array
     {
@@ -25,6 +27,8 @@ class AttendanceImporter
             throw ValidationException::withMessages(['file' => 'Invalid attendance device timezone configuration.']);
         }
 
+        $latestAllowedTime = CarbonImmutable::now($timezone)->addSeconds(self::FUTURE_SKEW_SECONDS);
+
         foreach ($logs as $index => $log) {
             $type = filter_var($log['type'] ?? null, FILTER_VALIDATE_INT);
             if (! in_array($type, [0, 1, 4, 5], true)) {
@@ -34,7 +38,7 @@ class AttendanceImporter
             try {
                 if (empty($log['timestamp']) || ! is_string($log['timestamp'])) throw new \InvalidArgumentException;
                 $time = CarbonImmutable::createFromFormat('!Y-m-d H:i:s', $log['timestamp'], $timezone);
-                if ($time->format('Y-m-d H:i:s') !== $log['timestamp'] || $time->isAfter(CarbonImmutable::now($timezone))) throw new \InvalidArgumentException;
+                if ($time->format('Y-m-d H:i:s') !== $log['timestamp'] || $time->isAfter($latestAllowedTime)) throw new \InvalidArgumentException;
             } catch (\Throwable $e) {
                 throw ValidationException::withMessages(['file' => 'Invalid or future timestamp at log '.($index + 1).'. Use YYYY-MM-DD HH:MM:SS.']);
             }
