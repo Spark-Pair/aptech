@@ -5,9 +5,9 @@ namespace LocalAttendanceAgent;
 class ApiClient
 {
     public function __construct(private array $config) {}
-    public function heartbeat(): void
+    public function heartbeat(): array
     {
-        $this->post('/api/v1/attendance-agent/heartbeat', []);
+        return $this->post('/api/v1/attendance-agent/heartbeat', []);
     }
     public function sync(array $payload): array
     {
@@ -25,17 +25,11 @@ class ApiClient
         $ch = curl_init($url);
         curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 10, CURLOPT_TIMEOUT => (int)($this->config['http_timeout'] ?? 20), CURLOPT_HTTPHEADER => ['Accept: application/json', 'Content-Type: application/json', 'Authorization: Bearer ' . $this->config['api_token']], CURLOPT_POSTFIELDS => json_encode($payload, JSON_THROW_ON_ERROR)]);
         $body = curl_exec($ch);
-        if ($body === false) {
-            $e = curl_error($ch);
-            curl_close($ch);
-            throw ApiException::connectionFailure($e);
-        }
+        if ($body === false) { $e = curl_error($ch); curl_close($ch); throw ApiException::connectionFailure($e); }
         $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         curl_close($ch);
         $decoded = json_decode($body, true);
-        if ($status < 200 || $status >= 300) {
-            throw ApiException::http($status, (string) $body);
-        }
+        if ($status < 200 || $status >= 300) throw ApiException::http($status, (string) $body);
         return is_array($decoded) ? $decoded : [];
     }
 }

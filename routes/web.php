@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AttendanceAgentStatusController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendanceDeviceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeController;
@@ -17,6 +18,12 @@ Route::middleware('auth')->group(function(){
     Route::get('shifts',[ShiftController::class,'index'])->name('shifts.index'); Route::post('shifts',[ShiftController::class,'store'])->name('shifts.store'); Route::put('shifts/{shift}',[ShiftController::class,'update'])->name('shifts.update');
     Route::get('attendances',[AttendanceController::class,'index'])->name('attendances.index'); Route::put('attendances/{attendance}',[AttendanceController::class,'update'])->name('attendances.update'); Route::post('fetchLogs',[AttendanceController::class,'fetchLogs'])->middleware('throttle:2,1')->name('attendance.sync'); Route::get('fetchLogs',fn()=>redirect()->route('operations.index'));
     Route::get('attendance-agent/status',AttendanceAgentStatusController::class)->middleware('throttle:120,1')->name('attendance-agent.status');
+    Route::get('attendance-devices',[AttendanceDeviceController::class,'index'])->name('attendance-devices.index');
+    Route::post('attendance-devices/branches',[AttendanceDeviceController::class,'storeBranch'])->name('attendance-devices.branches.store');
+    Route::put('attendance-devices/branches/{branch}',[AttendanceDeviceController::class,'updateBranch'])->name('attendance-devices.branches.update');
+    Route::post('attendance-devices/devices',[AttendanceDeviceController::class,'storeDevice'])->name('attendance-devices.devices.store');
+    Route::put('attendance-devices/devices/{agent}',[AttendanceDeviceController::class,'updateDevice'])->name('attendance-devices.devices.update');
+    Route::post('attendance-devices/devices/{agent}/rotate-token',[AttendanceDeviceController::class,'rotateToken'])->name('attendance-devices.devices.rotate-token');
     Route::get('reports',[ReportController::class,'index'])->name('reports.index'); Route::get('reports/export/csv',[ReportController::class,'csv'])->name('reports.csv'); Route::get('reports/export/excel',[ReportController::class,'excel'])->name('reports.excel');
     Route::get('operations',[OperationController::class,'index'])->name('operations.index'); Route::post('operations/import',[OperationController::class,'import'])->name('operations.import'); Route::post('operations/generate',[OperationController::class,'generate'])->name('operations.generate'); Route::get('leaves',[OperationController::class,'leaves'])->name('leaves.index'); Route::post('leaves',[OperationController::class,'storeLeave'])->name('leaves.store'); Route::post('logout',[AuthController::class,'logout'])->name('logout');
 });

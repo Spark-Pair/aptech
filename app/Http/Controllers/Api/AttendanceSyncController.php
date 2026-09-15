@@ -18,7 +18,19 @@ class AttendanceSyncController extends Controller
     {
         $agent = $request->attributes->get('attendance_sync_agent');
         $agent->forceFill(['last_heartbeat_at' => now(), 'last_error' => null])->save();
-        return response()->json(['message' => 'Heartbeat accepted.', 'server_time' => now()->toIso8601String(), 'branch_id' => $agent->branch_id]);
+
+        return response()->json([
+            'message' => 'Heartbeat accepted.',
+            'server_time' => now()->toIso8601String(),
+            'branch_id' => $agent->branch_id,
+            'device' => [
+                'device_identifier' => $agent->device_identifier,
+                'device_ip' => $agent->device_ip,
+                'device_port' => $agent->device_port,
+                'device_timezone' => $agent->device_timezone,
+                'device_timeout' => $agent->device_timeout,
+            ],
+        ]);
     }
 
     public function users(AttendanceAgentUsersRequest $request, DeviceUserSyncService $sync): JsonResponse
@@ -45,11 +57,7 @@ class AttendanceSyncController extends Controller
         $unmapped = $deviceUsers->unmappedDeviceUserIds($agent, $data['logs']);
         if ($unmapped !== []) {
             $agent->forceFill(['last_heartbeat_at' => now(), 'last_error' => 'Attendance sync is waiting for device user mappings.'])->save();
-            return response()->json([
-                'code' => 'device_users_not_synced',
-                'message' => 'Attendance batch is waiting for device user synchronization.',
-                'unmapped_user_ids' => $unmapped,
-            ], 409);
+            return response()->json(['code' => 'device_users_not_synced', 'message' => 'Attendance batch is waiting for device user synchronization.', 'unmapped_user_ids' => $unmapped], 409);
         }
 
         try {
