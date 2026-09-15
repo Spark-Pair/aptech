@@ -2,12 +2,12 @@
 @section('title', 'Employee Records')
 @section('subtitle', 'Select an employee to review monthly attendance')
 @section('content')
-<div class="section-toolbar"><p>Employees are shown first. Click any row to load that employee's details and daily records below.</p><a class="btn btn-success btn-sm" href="{{ route('employees.create') }}"><i class="fa fa-plus"></i> Add Employee</a></div>
+<div class="section-toolbar"><p>Employees are shown first. Click any row to load that employee's details and daily records below.</p><a class="btn btn-success btn-sm" href="{{ route('employees.create') }}" data-ajax-link><i class="fa fa-plus"></i> Add Employee</a></div>
 @include('partials.filters')
 @include('partials.employee-table')
 @if($selectedEmployee)
 <div id="employee-details" style="margin-top:18px">
-<div class="table-header">Selected Employee Details</div>
+<div class="table-header">Selected Employee Details <a href="{{ route('employees.edit',$selectedEmployee) }}" class="btn btn-xs btn-info pull-right" data-ajax-link><i class="fa fa-pencil"></i> Edit Employee</a></div>
 <div class="table-responsive"><table class="table table-striped table-bordered"><thead><tr><th>Machine Code</th><th>Employee Name</th><th>Department</th><th>Designation</th><th>Shift</th><th>Shift Hours</th></tr></thead><tbody><tr><td>{{ $selectedEmployee->empid }}</td><td>{{ $selectedEmployee->name }}</td><td>{{ $selectedEmployee->department }}</td><td>{{ $selectedEmployee->designation }}</td><td>{{ $selectedEmployee->shift?->name ?? 'Not assigned' }}</td><td>@if($selectedEmployee->shift){{ date('h:i A',strtotime($selectedEmployee->shift->start_time)) }} – {{ date('h:i A',strtotime($selectedEmployee->shift->end_time)) }} ({{ intdiv($selectedEmployee->shift->duration_minutes,60) }}h {{ $selectedEmployee->shift->duration_minutes%60 }}m)@else—@endif</td></tr></tbody></table></div>
 @if($selectedSummary)
 <x-summary :summary="collect($selectedSummary)->only(['Present','Absent','Off Day','Leave'])->all()" />
