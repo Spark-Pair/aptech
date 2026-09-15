@@ -5,100 +5,76 @@
 
 Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 
-## Locked
-- [x] Same UI/UX; modular/reusable architecture; no browser realtime/polling requirement; users may refresh for latest attendance.
-- [x] Production Laravel = MySQL on Hostinger-compatible shared hosting.
-- [x] After Local Agent cutover, hosted Laravel never directly accesses ZKTeco/private LAN.
-- [x] Multi-branch identity must never assume a ZKTeco `userid` is globally unique across machines/branches.
+## Locked architecture
+- [x] Same UI/UX direction; modular/reusable architecture; no browser realtime/polling requirement; users refresh for latest attendance.
+- [x] Production Laravel uses MySQL/MariaDB on Hostinger shared hosting.
+- [x] ZKTeco sockets exist only on a Local Agent PC on the device LAN; hosted Laravel uses outbound HTTPS from the agent and never reaches the private LAN directly.
+- [x] Multi-branch identity never assumes ZKTeco `userid` is globally unique. Identity is agent/device scoped.
+- [x] Company users manage branches, devices, branch assignment and device connection settings in the web app. Local `config.json` is not the operational source of truth for device IP/port after provisioning.
+- [x] `main`/`master` remain untouched until explicit approval.
 
-## Completed foundation
-- [x] Architecture/database/ZKTeco/AJAX audit.
-- [x] Versioned heartbeat/sync API, agent model, hashed revocable bearer credentials, device binding, validation/throttling.
-- [x] Server transport batch idempotency + acknowledgement + heartbeat/last-sync/error health fields.
-- [x] Existing `AttendanceImporter` remains authoritative hosted business logic.
-- [x] API/security contract documented; auth/validation/idempotency test coverage added.
-
-## MySQL / shared hosting
-- [x] Static compatibility audit confirmed by real MySQL 8.0.46 execution on disposable `aptech_test` database.
-- [x] MySQL clean-test/existing-data verification checklist documented and linked to result logging.
-- [x] Clean migrate/seed on disposable MySQL completed; expanded automated CRUD/auth/HR/attendance/report/status regression passes.
-- [x] Dedicated `phpunit.mysql.xml` keeps the existing SQLite test configuration intact and targets a disposable MySQL test database without storing its password.
-- [x] Hostinger deployment/update/rollback target documented.
-- [~] Actual Hostinger verification: PHP 8.2.33 and required extensions confirmed; Laravel 10.48.28 runs in production mode with debug off, HTTPS APP_URL, file cache/session and sync queue. Live project currently sits under `public_html` with an internal rewrite to `public/`; sensitive-path checks passed, but preferred document-root isolation review remains.
-- [x] Hostinger database connectivity verified against MariaDB 11.8.9 at `127.0.0.1`.
-- [x] Isolated Hostinger MariaDB test database `u617460922_aptech_test` and separate `~/aptech-mariadb-test` checkout verified; production DB is not used by the regression checkout.
-- [x] MariaDB clean migration regression passed after adding a dedicated `empid` index before replacing the legacy attendance unique key; branch, device-user, and employee-sequence migrations complete successfully.
-- [x] Full automated regression on Hostinger MariaDB after allocator hardening passed: 58 tests, 239 assertions, 0 failures.
-- [x] Production SQLite -> MariaDB transfer and integrity verification completed previously; rollback artifacts retained outside webroot.
-- [!] Do not deploy the new branch/device-identity migrations to production until SQLite regression and physical branch verification are completed.
+## Hosting / database
+- [x] Hostinger PHP 8.2.33, Laravel 10.48.28, MariaDB 11.8.9, HTTPS production configuration verified.
+- [x] Isolated Hostinger MariaDB test DB/check-out exists; production DB is never used for destructive regression tests.
+- [x] Branch/device-user/employee-sequence migrations pass cleanly on Hostinger MariaDB.
+- [x] Allocator hardening regression: 58 tests / 239 assertions / 0 failures on Hostinger MariaDB.
+- [x] Verified production SQL backup created outside webroot before allocator deployment.
+- [x] Production checkout updated to `952191b` and allocator migration `2026_09_14_150000` deployed successfully; production sequence initialized correctly.
+- [~] Live project remains under `public_html` with internal rewrite to `public/`; sensitive-path checks passed, preferred document-root isolation review remains.
+- [ ] Deploy/test the new app-managed device connection settings migration after local regression passes.
 
 ## Local Sync Agent
-- [x] Windows-first PHP CLI MVP; external gitignored config and configurable device/API parameters.
-- [x] ZKTeco sockets only on office PC; outbound HTTPS only.
-- [x] Durable agent-only SQLite queue/checkpoint, UUID transport idempotency, capped retries/pending replay.
-- [x] Heartbeat, safe rotating diagnostics and acknowledged timestamp.
-- [x] Windows Task Scheduler helpers support one continuous `--run` worker with overlap prevention, no execution ceiling and restart-on-failure.
-- [x] Startup installer registers the worker at Windows boot under LocalSystem/SYSTEM with no interactive login or terminal window required; elevation is required at install time.
-- [x] Status helper reports task identity/trigger/runtime details and recent agent logs; uninstall preserves config/state/logs.
-- [x] Prerequisite checker validates PHP 8.1+, sockets, curl, pdo_sqlite, sqlite3 and Composer autoload.
-- [x] Physical user creation, multi-user attendance persistence and continuous polling through Hostinger MariaDB passed.
-- [~] New boot-time SYSTEM deployment mode implemented but requires physical reboot/no-login verification on Windows.
-- [~] Timestamp/device-log identity: automated same-timestamp/backfill coverage exists; exact physical edge verification remains.
-- [ ] Build/refine non-technical client installer + one-time provisioning flow after startup mode is physically verified. Installer must not embed long-lived API tokens.
+- [x] Windows PHP CLI agent, durable SQLite queue/checkpoint, UUID batch idempotency, retry/dead-letter handling, heartbeat, rotating diagnostics and safe ACK history.
+- [x] Continuous Task Scheduler worker uses `--run`, LocalSystem/SYSTEM, AtStartup, highest privilege, overlap prevention, no execution ceiling and restart-on-failure.
+- [x] Existing task physically observed `Running` as SYSTEM with boot trigger.
+- [x] Agent safely rejects clearly future-dated device rows.
+- [x] Device users sync before attendance; unmapped attendance receives retryable `device_users_not_synced` instead of being acknowledged/lost.
+- [x] Heartbeat now returns server-managed device connection settings and Local Agent applies current IP/port/timeout before every device read. This allows IP changes from the web app without editing the Windows config file.
+- [ ] Re-run local SQLite automated regression after latest device-management changes.
+- [ ] Pull latest branch on Windows and verify remote-config change from old device IP to current `192.168.100.16` without editing `config.json`.
+- [ ] Reboot Windows and verify SYSTEM task starts before login, has LAN access and sends a fresh heartbeat/sync with no visible terminal.
+- [ ] Build/refine non-technical one-click installer + one-time provisioning flow. Long-lived bearer tokens must never be embedded in a distributable installer.
 
-## Multi-branch / device identity
-- [x] Branch model and branch ownership on attendance agents/attendance rows added; historical rows migrate to `Main Branch`.
-- [x] Attendance uniqueness changed to branch + employee + date.
-- [x] Added `attendance_device_users`: identity is now `(attendance_sync_agent_id, device_user_id) -> employee` rather than global `device_user_id -> empid`.
-- [x] Device user sync now creates/reuses an agent-scoped mapping and preserves manually maintained employee business fields.
-- [x] Attendance API translates device user IDs through the authenticated agent mapping before invoking `AttendanceImporter`.
-- [x] Unmapped device IDs are no longer acknowledged as skipped: the server returns machine-readable HTTP 409 `device_users_not_synced` without importing or recording the batch, and the Local Agent classifies only that specific conflict as transient/retryable.
-- [x] Same device user ID on two agents/branches is covered by regression code and maps to separate employees unless explicitly linked later.
-- [x] Legacy first mapping can safely claim an existing employee with matching empid only while that device user ID has not already been mapped by another agent.
-- [x] Attendance page supports All Branches / specific branch filtering and shows branch on rows.
-- [x] Report UI/controller/export carry branch filters and branch columns; Local Sync Agent status includes branch name.
-- [x] Legacy direct-device fetch is pinned to Main Branch during staged transition so it cannot create unassigned attendance.
-- [x] Concurrent device-user creation uses a single row-lock-backed employee-ID allocator and re-checks the agent mapping after acquiring the lock, preventing duplicate allocation and orphan employees from competing agent requests.
-- [x] Allocator advances past employee IDs created manually after sequence initialization; regression coverage added.
-- [x] Hostinger MariaDB clean migration + full allocator regression passed: 58 tests, 239 assertions.
-- [ ] Re-run SQLite regression for the allocator migration/service changes.
-- [ ] Physically verify two-agent/same-device-user-ID behavior before production multi-branch use.
+## Branches / devices / identity
+- [x] `branches` model/table; historical attendance/agents assigned to `Main Branch`.
+- [x] Attendance uniqueness is `(branch_id, empid, date)`.
+- [x] `attendance_device_users` maps `(attendance_sync_agent_id, device_user_id) -> employee`.
+- [x] Same device user ID on different agents can map independently without cross-branch collision.
+- [x] Row-lock-backed global employee-ID allocator prevents duplicate employee allocation/orphans under competing agent requests and advances past manually created empids.
+- [x] Attendance/report UI supports All Branches and selected branch, including branch columns/exports.
+- [x] Added authenticated **Settings -> Branches & Devices** management page.
+- [x] Users can create/edit/activate/deactivate branches.
+- [x] Users can create/edit devices, assign/reassign branch, and manage device name, stable identifier, LAN IP, port, timezone, timeout and active state.
+- [x] New device provisioning creates a strong bearer credential and displays it only once; stored server credential remains hashed.
+- [x] Credential rotation is explicit and warns that the existing Local Agent will stop authenticating until reprovisioned.
+- [ ] Add/complete automated CRUD + authorization + heartbeat remote-config tests for the new management UI/API behavior.
+- [ ] Physically verify two agents/two branches including the same ZKTeco `userid` on both devices.
 
-## UI/status
-- [x] Existing AJAX layer retained; no SPA rewrite.
-- [x] Server status controller provides active/online/heartbeat/sync/error data and now branch identity.
-- [x] Operations status remains one fetch on entry/re-entry; continuous browser polling is intentionally disabled.
-- [x] Browser realtime/WebSocket/SSE attendance updates explicitly dropped from scope; normal refresh is acceptable.
-
-## Cutover/testing
-- [x] Attendance Agent API runtime checks passed, including successful batch replay/idempotency and branch/device-user mapping.
-- [x] Local Agent poison-batch handling, retry classification, device timezone handling, durable fingerprints, ACK tracking and cleanup dry-run implemented.
-- [x] Installed Rats/ZKTeco library inspected: full attendance reads and bulk `clearAttendance()` only; no per-record delete API found.
-- [x] End-to-end real path physically passed: ZKTeco -> Windows Local Agent -> HTTPS -> AttendanceImporter -> MariaDB.
-- [x] Production physical test auto-created device users and persisted attendance; continuous polling/dedup physically observed.
-- [x] Cleanup dry-run physically reviewed; destructive cleanup remains disabled while unresolved rows exist.
-- [x] At-logon background scheduled worker physically ran successfully before startup-mode change.
-- [x] Hostinger MariaDB automated regression after allocator hardening passed: 58 tests / 239 assertions.
-- [ ] Re-run SQLite automated regression after allocator hardening.
-- [ ] Reinstall latest startup/SYSTEM task and verify after Windows reboot before login; confirm no visible terminal and fresh agent log/heartbeat.
+## Existing physical verification
+- [x] End-to-end ZKTeco -> Windows Local Agent -> HTTPS -> Laravel -> MariaDB passed previously.
+- [x] Device users `1/Hasan` and `2/Hassan` were previously auto-created and attendance persisted in the earlier physical test.
+- [x] Continuous polling/dedup previously observed with unchanged history producing no duplicate posts.
+- [x] Cleanup dry-run reviewed; destructive device cleanup remains disabled.
+- [x] ZKTeco library supports full attendance read and bulk `clearAttendance()` only; no per-record deletion was found.
 - [ ] Physically verify exact same-timestamp and delayed/backfilled older punches.
-- [ ] Approve/implement any destructive device bulk-clear threshold separately; never clear while unresolved/pending/dead-letter/ambiguous rows exist.
-- [ ] Only after replacement proves stable, disable/remove hosted ZKTeco socket/private-LAN dependency.
-- [ ] Final document-root review, physical-device verification, explicit approval, then merge.
+- [ ] Never bulk-clear device attendance while unresolved/pending/dead-letter/ambiguous rows exist.
 
-## Progress — 2026-09-14
-- [x] Real background `--run` task installed and observed Running on Windows with PHP 8.2.28.
-- [x] User confirmed browser realtime is not required; no WebSocket/SSE/browser polling work will be added.
-- [x] Startup deployment changed from `AtLogOn` current-user execution to `AtStartup` + built-in `SYSTEM` service-account execution, non-interactive and highest privilege.
-- [x] Client deployment direction documented: future one-click installer should provision using a one-time code, not ship long-lived API credentials.
-- [x] Multi-branch collision review found global ZKTeco userid assumption unsafe; branch-safe agent/device-user mapping layer implemented before production migration.
-- [x] Attendance and report filters/status presentation updated for branch awareness without redesigning the UI.
-- [x] Unmapped attendance batches now remain retryable until device-user mappings exist.
-- [x] Device-user employee allocation hardened with a portable sequence table + transactional row lock + post-lock mapping re-check; stale sequence values skip already-used empids.
-- [x] Hostinger MariaDB 11.8.9 clean migration and full post-hardening regression passed: 58 tests / 239 assertions / 0 failures.
-- [~] Code is committed only to `web-hosting-sync`; `main`/`master` remain untouched. SQLite regression + physical multi-branch/startup verification remain before production migration.
+## Current production/testing state — 2026-09-15
+- [x] Production branch/device identity + allocator schema is already deployed; the old roadmap warning saying it was not deployed was stale and has been corrected.
+- [x] Production app currently has `Main Branch`; production employee/attendance/device-mapping data was intentionally empty immediately after allocator migration.
+- [x] Windows Local Agent task is currently confirmed running as SYSTEM/AtStartup.
+- [!] Latest physical log showed the agent could not connect because the ZKTeco LAN IP changed from `192.168.100.19` to `192.168.100.16`.
+- [x] User explicitly rejected manually editing the Local Agent for operational IP changes; app-managed branches/devices/settings are now the required final design.
+- [x] App-managed branch/device configuration implementation committed on `web-hosting-sync` in `2acb703`.
+- [ ] Run automated regression for `2acb703` on SQLite and isolated Hostinger MariaDB.
+- [ ] Deploy `2acb703` + new migration to production only after regression passes, then set the existing Office device IP to `192.168.100.16` in the app and verify the running agent picks it up automatically.
+- [ ] Final physical multi-branch/startup/edge-case verification, document-root review, explicit approval, then merge.
 
 ## Target
 ```text
-ZKTeco LAN -> Windows Local Agent -> outbound HTTPS -> authenticated Agent/Branch -> Device User Mapping -> Employee -> AttendanceImporter -> MySQL -> existing AJAX UI (manual refresh)
+Company -> Branches -> Devices
+                     |
+ZKTeco LAN <- Windows Local Agent <- HTTPS server-managed device config
+     |
+     +-> users/punches -> authenticated Agent/Branch -> Device User Mapping -> Employee -> AttendanceImporter -> MariaDB -> existing AJAX UI
 ```
