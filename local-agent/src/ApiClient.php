@@ -5,7 +5,7 @@ namespace LocalAttendanceAgent;
 class ApiClient
 {
     public function __construct(private array $config) {}
-    public function heartbeat(): array
+    public function heartbeat()
     {
         return $this->post('/api/v1/attendance-agent/heartbeat', []);
     }
