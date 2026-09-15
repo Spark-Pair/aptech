@@ -63,7 +63,7 @@ class AttendanceSyncController extends Controller
         try {
             $response = DB::transaction(function () use ($agent, $data, $importer, $deviceUsers) {
                 $translated = $deviceUsers->translateLogs($agent, $data['logs']);
-                $result = $importer->import($translated, $agent->branch_id);
+                $result = $importer->import($translated, $agent->branch_id, $agent->device_timezone ?: config('app.timezone', 'Asia/Karachi'));
                 $batch = AttendanceSyncBatch::create(['attendance_sync_agent_id' => $agent->id, 'batch_id' => $data['batch_id'], 'accepted_count' => count($data['logs']) - $result['skipped'], 'skipped_count' => $result['skipped'], 'updated_days' => $result['days']]);
                 $agent->forceFill(['last_heartbeat_at' => now(), 'last_sync_at' => now(), 'last_error' => null])->save();
                 return $batch;
