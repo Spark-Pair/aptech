@@ -6,75 +6,71 @@
 Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 
 ## Locked architecture
-- [x] Same UI/UX direction; modular/reusable architecture; no browser realtime/polling requirement; users refresh for latest attendance.
+- [x] Preserve existing Ace/Bootstrap UI direction; modular/reusable; no browser polling/WebSocket/SSE requirement.
 - [x] Production Laravel uses MySQL/MariaDB on Hostinger shared hosting.
-- [x] ZKTeco sockets exist only on a Local Agent PC on the device LAN; hosted Laravel uses outbound HTTPS from the agent and never reaches the private LAN directly.
-- [x] Multi-branch identity never assumes ZKTeco `userid` is globally unique. Identity is agent/device scoped.
-- [x] Company users manage branches, devices, branch assignment and device connection settings in the web app. Local `config.json` is not the operational source of truth for device IP/port after provisioning.
+- [x] Hosted Laravel never connects directly to private ZKTeco LAN sockets.
+- [x] Company users manage branches, devices, branch assignment, device IP, port, timezone and timeout in the web app.
+- [x] Device IP/port are server-managed after provisioning; normal operation never requires editing local config.
+- [x] One Local Agent process manages multiple ZKTeco devices assigned to it on the same LAN/Wi-Fi.
+- [x] Each device remains independently branch-scoped and device-user identity remains device-scoped.
 - [x] `main`/`master` remain untouched until explicit approval.
 
-## Hosting / database
-- [x] Hostinger PHP 8.2.33, Laravel 10.48.28, MariaDB 11.8.9, HTTPS production configuration verified.
-- [x] Isolated Hostinger MariaDB test DB/check-out exists; production DB is never used for destructive regression tests.
-- [x] Branch/device-user/employee-sequence migrations pass cleanly on Hostinger MariaDB.
-- [x] Allocator hardening regression: 58 tests / 239 assertions / 0 failures on Hostinger MariaDB.
-- [x] Verified production SQL backup created outside webroot before allocator deployment.
-- [x] Production checkout updated to `952191b` and allocator migration `2026_09_14_150000` deployed successfully; production sequence initialized correctly.
-- [~] Live project remains under `public_html` with internal rewrite to `public/`; sensitive-path checks passed, preferred document-root isolation review remains.
-- [ ] Deploy/test the new app-managed device connection settings migration after local regression passes.
+## Verified baseline
+- [x] Windows SQLite regression: 58 tests / 239 assertions / 0 failures.
+- [x] Isolated Hostinger MariaDB regression: 58 tests / 239 assertions / 0 failures.
+- [x] Production branch/device identity + allocator schema deployed.
+- [x] Production device connection settings migration deployed as Batch 3.
+- [x] Verified production SQL backup exists outside webroot.
+- [x] Remote device configuration was physically consumed by the Local Agent and sync resumed after an IP change without editing local config.
+- [x] Employee AJAX edit/viewport fixes deployed through `0702180`.
+- [x] Server-side configured-device timezone import fix deployed through `4fcbf45`.
 
-## Local Sync Agent
-- [x] Windows PHP CLI agent, durable SQLite queue/checkpoint, UUID batch idempotency, retry/dead-letter handling, heartbeat, rotating diagnostics and safe ACK history.
-- [x] Continuous Task Scheduler worker uses `--run`, LocalSystem/SYSTEM, AtStartup, highest privilege, overlap prevention, no execution ceiling and restart-on-failure.
-- [x] Existing task physically observed `Running` as SYSTEM with boot trigger.
-- [x] Agent safely rejects clearly future-dated device rows.
-- [x] Device users sync before attendance; unmapped attendance receives retryable `device_users_not_synced` instead of being acknowledged/lost.
-- [x] Heartbeat now returns server-managed device connection settings and Local Agent applies current IP/port/timeout before every device read. This allows IP changes from the web app without editing the Windows config file.
-- [ ] Re-run local SQLite automated regression after latest device-management changes.
-- [ ] Pull latest branch on Windows and verify remote-config change from old device IP to current `192.168.100.16` without editing `config.json`.
-- [ ] Reboot Windows and verify SYSTEM task starts before login, has LAN access and sends a fresh heartbeat/sync with no visible terminal.
-- [ ] Build/refine non-technical one-click installer + one-time provisioning flow. Long-lived bearer tokens must never be embedded in a distributable installer.
+## Multi-device Local Agent — 2026-09-16
+- [x] Added `local_agent_key` grouping migration so multiple device records can share one Local Agent credential without losing per-device identity.
+- [x] Heartbeat now returns an assigned `devices` collection while retaining the legacy single `device` field for backward compatibility.
+- [x] Users/attendance API authorization resolves the submitted `device_identifier` only inside the authenticated Local Agent group.
+- [x] Local Agent loops through all assigned devices each cycle and applies each device's server-managed IP/port/timeout.
+- [x] Failure of one physical device is isolated so other assigned devices continue syncing.
+- [x] Local SQLite fingerprints and user-roster state are scoped per additional device while preserving legacy fingerprints for the originally provisioned device.
+- [x] New devices automatically join the most recently active Local Agent when one exists; first-device provisioning still creates a credential.
+- [x] Saving an existing never-connected device can attach it to the currently active Local Agent, allowing the current `.7` device to join the Local Agent already serving `.15`.
+- [x] Credential rotation applies to every device in that Local Agent group.
+- [ ] Deploy migration + server changes to Hostinger.
+- [ ] Put the updated `AgentRunner.php` on the Zorin demo Local Agent.
+- [ ] In Branches & Devices, save the never-connected `.7` device once so it joins the active `.15` Local Agent group.
+- [ ] Run `php agent.php --once` and verify one heartbeat returns both `.7:4370` and `.15:4370`, both user rosters sync, and both devices get independent last-contact timestamps.
+- [ ] Run `php agent.php --run`, make fresh punches on both physical devices, manually refresh the web app, and verify correct branch/device attendance.
+- [ ] Run automated regression after the multi-device changes on SQLite and isolated Hostinger MariaDB.
 
-## Branches / devices / identity
-- [x] `branches` model/table; historical attendance/agents assigned to `Main Branch`.
-- [x] Attendance uniqueness is `(branch_id, empid, date)`.
-- [x] `attendance_device_users` maps `(attendance_sync_agent_id, device_user_id) -> employee`.
-- [x] Same device user ID on different agents can map independently without cross-branch collision.
-- [x] Row-lock-backed global employee-ID allocator prevents duplicate employee allocation/orphans under competing agent requests and advances past manually created empids.
-- [x] Attendance/report UI supports All Branches and selected branch, including branch columns/exports.
-- [x] Added authenticated **Settings -> Branches & Devices** management page.
-- [x] Users can create/edit/activate/deactivate branches.
-- [x] Users can create/edit devices, assign/reassign branch, and manage device name, stable identifier, LAN IP, port, timezone, timeout and active state.
-- [x] New device provisioning creates a strong bearer credential and displays it only once; stored server credential remains hashed.
-- [x] Credential rotation is explicit and warns that the existing Local Agent will stop authenticating until reprovisioned.
-- [ ] Add/complete automated CRUD + authorization + heartbeat remote-config tests for the new management UI/API behavior.
-- [ ] Physically verify two agents/two branches including the same ZKTeco `userid` on both devices.
+## Current known issues / pending verification
+- [x] Empty device-user snapshots are valid server input (`af9edee`); this fixes the earlier 422 `users field is required` worker termination cause once deployed.
+- [ ] Production is still confirmed only through `4fcbf45`; later UI work, `af9edee`, and the 2026-09-16 multi-device work require deployment.
+- [ ] Fresh attendance punches still previously received a server HTTP 422 after the timezone fix; inspect the exact dead-letter payload before changing future-time tolerance.
+- [ ] Old missing attendance remains unresolved; compare local acknowledged/dead-letter state with production before any replay/reset.
+- [x] Known truly future-dated uid50/51 rows are intentionally skipped locally.
+- [ ] Latest shifts/leaves/attendance/operations modal UI refactor through `9fe7697` is committed but not yet confirmed deployed/browser-tested.
+- [ ] Add/complete automated CRUD + authorization + multi-device heartbeat tests.
+- [ ] Verify separate Local Agents for separate physical networks before general multi-site rollout.
+- [ ] Build/refine non-technical one-click installer + one-time provisioning flow.
+- [ ] Preferred production document-root isolation review remains.
 
-## Existing physical verification
-- [x] End-to-end ZKTeco -> Windows Local Agent -> HTTPS -> Laravel -> MariaDB passed previously.
-- [x] Device users `1/Hasan` and `2/Hassan` were previously auto-created and attendance persisted in the earlier physical test.
-- [x] Continuous polling/dedup previously observed with unchanged history producing no duplicate posts.
-- [x] Cleanup dry-run reviewed; destructive device cleanup remains disabled.
-- [x] ZKTeco library supports full attendance read and bulk `clearAttendance()` only; no per-record deletion was found.
-- [ ] Physically verify exact same-timestamp and delayed/backfilled older punches.
-- [ ] Never bulk-clear device attendance while unresolved/pending/dead-letter/ambiguous rows exist.
-
-## Current production/testing state — 2026-09-15
-- [x] Production branch/device identity + allocator schema is already deployed; the old roadmap warning saying it was not deployed was stale and has been corrected.
-- [x] Production app currently has `Main Branch`; production employee/attendance/device-mapping data was intentionally empty immediately after allocator migration.
-- [x] Windows Local Agent task is currently confirmed running as SYSTEM/AtStartup.
-- [!] Latest physical log showed the agent could not connect because the ZKTeco LAN IP changed from `192.168.100.19` to `192.168.100.16`.
-- [x] User explicitly rejected manually editing the Local Agent for operational IP changes; app-managed branches/devices/settings are now the required final design.
-- [x] App-managed branch/device configuration implementation committed on `web-hosting-sync` in `2acb703`.
-- [ ] Run automated regression for `2acb703` on SQLite and isolated Hostinger MariaDB.
-- [ ] Deploy `2acb703` + new migration to production only after regression passes, then set the existing Office device IP to `192.168.100.16` in the app and verify the running agent picks it up automatically.
-- [ ] Final physical multi-branch/startup/edge-case verification, document-root review, explicit approval, then merge.
+## Safety
+- [x] Destructive device cleanup remains disabled.
+- [x] Never bulk-clear ZKTeco attendance while unresolved/pending/dead-letter/ambiguous rows exist.
+- [x] Do not reset/delete Local Agent `state.sqlite` to force a replay.
+- [x] Do not expose bearer credentials in source control or screenshots.
 
 ## Target
 ```text
-Company -> Branches -> Devices
-                     |
-ZKTeco LAN <- Windows Local Agent <- HTTPS server-managed device config
-     |
-     +-> users/punches -> authenticated Agent/Branch -> Device User Mapping -> Employee -> AttendanceImporter -> MariaDB -> existing AJAX UI
+Company
+  -> Branches
+      -> Devices (.7:4370, .15:4370, ...)
+           ^
+           | same LAN/Wi-Fi
+      One Local Agent PC
+           |
+           +-> heartbeat gets assigned devices
+           +-> device A users/punches -> HTTPS -> device A / branch A
+           +-> device B users/punches -> HTTPS -> device B / branch B
+           +-> one device offline does not stop the others
 ```
