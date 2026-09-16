@@ -12,7 +12,7 @@ class AttendanceSyncAgent extends Model
     use HasFactory;
 
     protected $fillable = [
-        'branch_id', 'name', 'device_identifier', 'device_ip', 'device_port',
+        'branch_id', 'local_agent_key', 'name', 'device_identifier', 'device_ip', 'device_port',
         'device_timezone', 'device_timeout', 'token_hash', 'is_active',
         'last_heartbeat_at', 'last_sync_at', 'last_error',
     ];
