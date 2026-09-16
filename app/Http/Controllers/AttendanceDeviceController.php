@@ -14,9 +14,15 @@ class AttendanceDeviceController extends Controller
 {
     public function index(): View
     {
-        return view('attendance-devices.index', [
-            'branches' => Branch::with(['attendanceSyncAgents' => fn ($q) => $q->orderBy('name')])->orderBy('name')->get(),
-        ]);
+        $branches = Branch::with(['attendanceSyncAgents' => fn ($q) => $q->orderBy('name')])->orderBy('name')->get();
+        $localAgents = AttendanceSyncAgent::query()
+            ->whereNotNull('local_agent_key')
+            ->orderByDesc('last_heartbeat_at')
+            ->get()
+            ->unique('local_agent_key')
+            ->values();
+
+        return view('attendance-devices.index', compact('branches', 'localAgents'));
     }
 
     public function storeBranch(Request $request): RedirectResponse
@@ -37,11 +43,16 @@ class AttendanceDeviceController extends Controller
     {
         $data = $this->validateDevice($request);
         $selected = $this->selectedLocalAgent($request);
+
         if ($selected) {
             $key = $selected->local_agent_key ?: 'agent-'.$selected->id;
             if (! $selected->local_agent_key) $selected->update(['local_agent_key' => $key]);
             AttendanceSyncAgent::create($data + ['local_agent_key' => $key, 'token_hash' => $selected->token_hash, 'is_active' => true]);
-            return back()->with('success', 'Device added. The running Local Agent will pick it up automatically on its next heartbeat.');
+            return back()->with('success', 'Device added and assigned to the selected Local Agent.');
+        }
+
+        if (AttendanceSyncAgent::exists()) {
+            return back()->withErrors(['local_agent_key' => 'Select a Local Agent for this device.'])->withInput();
         }
 
         $token = Str::random(64);
@@ -53,15 +64,19 @@ class AttendanceDeviceController extends Controller
     {
         $data = $this->validateDevice($request, $agent);
         $selected = $this->selectedLocalAgent($request);
-        if ($selected && $selected->id !== $agent->id && ! $agent->last_heartbeat_at) {
-            $key = $selected->local_agent_key ?: 'agent-'.$selected->id;
-            if (! $selected->local_agent_key) $selected->update(['local_agent_key' => $key]);
-            $data['local_agent_key'] = $key;
-            $data['token_hash'] = $selected->token_hash;
+
+        if (! $selected) {
+            return back()->withErrors(['local_agent_key' => 'Select a Local Agent for this device.'])->withInput();
         }
+
+        $key = $selected->local_agent_key ?: 'agent-'.$selected->id;
+        if (! $selected->local_agent_key) $selected->update(['local_agent_key' => $key]);
+        $data['local_agent_key'] = $key;
+        $data['token_hash'] = $selected->token_hash;
         $data['is_active'] = $request->boolean('is_active');
         $agent->update($data);
-        return back()->with('success', 'Device configuration updated. The Local Agent will pick it up automatically on its next heartbeat.');
+
+        return back()->with('success', 'Device configuration and Local Agent assignment updated.');
     }
 
     public function rotateToken(AttendanceSyncAgent $agent): RedirectResponse
@@ -75,14 +90,13 @@ class AttendanceDeviceController extends Controller
 
     private function selectedLocalAgent(Request $request): ?AttendanceSyncAgent
     {
-        $id = $request->input('local_agent_device_id');
-        if ($id) return AttendanceSyncAgent::findOrFail($id);
+        $key = $request->input('local_agent_key');
+        if (! $key) return null;
 
         return AttendanceSyncAgent::query()
-            ->where('is_active', true)
-            ->whereNotNull('last_heartbeat_at')
+            ->where('local_agent_key', $key)
             ->orderByDesc('last_heartbeat_at')
-            ->first();
+            ->firstOrFail();
     }
 
     private function validateDevice(Request $request, ?AttendanceSyncAgent $agent = null): array
