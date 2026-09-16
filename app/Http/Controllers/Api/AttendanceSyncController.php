@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AttendanceAgentSyncRequest;
 use App\Http\Requests\AttendanceAgentUsersRequest;
+use App\Models\AttendanceSyncAgent;
 use App\Models\AttendanceSyncBatch;
 use App\Services\AttendanceImporter;
 use App\Services\DeviceUserSyncService;
@@ -16,29 +17,43 @@ class AttendanceSyncController extends Controller
 {
     public function heartbeat(Request $request): JsonResponse
     {
-        $agent = $request->attributes->get('attendance_sync_agent');
-        $agent->forceFill(['last_heartbeat_at' => now(), 'last_error' => null])->save();
+        $credential = $request->attributes->get('attendance_sync_agent');
+        $credential->forceFill(['last_heartbeat_at' => now(), 'last_error' => null])->save();
+
+        $devices = $this->devicesForCredential($credential)
+            ->with('branch:id,name,code')
+            ->orderBy('name')
+            ->get()
+            ->map(fn (AttendanceSyncAgent $device) => [
+                'id' => $device->id,
+                'name' => $device->name,
+                'branch_id' => $device->branch_id,
+                'branch_name' => $device->branch?->name,
+                'device_identifier' => $device->device_identifier,
+                'device_ip' => $device->device_ip,
+                'device_port' => $device->device_port,
+                'device_timezone' => $device->device_timezone,
+                'device_timeout' => $device->device_timeout,
+            ])->values();
 
         return response()->json([
             'message' => 'Heartbeat accepted.',
             'server_time' => now()->toIso8601String(),
-            'branch_id' => $agent->branch_id,
-            'device' => [
-                'device_identifier' => $agent->device_identifier,
-                'device_ip' => $agent->device_ip,
-                'device_port' => $agent->device_port,
-                'device_timezone' => $agent->device_timezone,
-                'device_timeout' => $agent->device_timeout,
-            ],
+            'local_agent_key' => $credential->local_agent_key,
+            'devices' => $devices,
+            // Backward compatibility for older single-device Local Agents.
+            'branch_id' => $credential->branch_id,
+            'device' => $devices->first(),
         ]);
     }
 
     public function users(AttendanceAgentUsersRequest $request, DeviceUserSyncService $sync): JsonResponse
     {
-        $agent = $request->attributes->get('attendance_sync_agent');
+        $credential = $request->attributes->get('attendance_sync_agent');
         $data = $request->validated();
-        if (! hash_equals($agent->device_identifier, $data['device_identifier'])) return response()->json(['message' => 'Device is not authorized for this credential.'], 403);
-        if (! $agent->branch_id) return response()->json(['message' => 'Attendance agent is not assigned to a branch.'], 409);
+        $agent = $this->resolveDevice($credential, $data['device_identifier']);
+        if (! $agent) return response()->json(['message' => 'Device is not authorized for this Local Agent.'], 403);
+        if (! $agent->branch_id) return response()->json(['message' => 'Attendance device is not assigned to a branch.'], 409);
         $result = $sync->sync($agent, $data['users']);
         $agent->forceFill(['last_heartbeat_at' => now(), 'last_error' => null])->save();
         return response()->json(['message' => 'Device users synchronized.', 'created' => $result['created'], 'existing' => $result['existing'], 'skipped' => $result['skipped'], 'branch_id' => $agent->branch_id]);
@@ -46,10 +61,11 @@ class AttendanceSyncController extends Controller
 
     public function sync(AttendanceAgentSyncRequest $request, AttendanceImporter $importer, DeviceUserSyncService $deviceUsers): JsonResponse
     {
-        $agent = $request->attributes->get('attendance_sync_agent');
+        $credential = $request->attributes->get('attendance_sync_agent');
         $data = $request->validated();
-        if (! hash_equals($agent->device_identifier, $data['device_identifier'])) return response()->json(['message' => 'Device is not authorized for this credential.'], 403);
-        if (! $agent->branch_id) return response()->json(['message' => 'Attendance agent is not assigned to a branch.'], 409);
+        $agent = $this->resolveDevice($credential, $data['device_identifier']);
+        if (! $agent) return response()->json(['message' => 'Device is not authorized for this Local Agent.'], 403);
+        if (! $agent->branch_id) return response()->json(['message' => 'Attendance device is not assigned to a branch.'], 409);
 
         $existing = AttendanceSyncBatch::where('attendance_sync_agent_id', $agent->id)->where('batch_id', $data['batch_id'])->first();
         if ($existing) return response()->json(['message' => 'Batch already processed.', 'duplicate' => true, 'batch_id' => $existing->batch_id, 'accepted' => $existing->accepted_count, 'skipped' => $existing->skipped_count, 'updated_days' => $existing->updated_days, 'branch_id' => $agent->branch_id]);
@@ -73,5 +89,21 @@ class AttendanceSyncController extends Controller
             $agent->forceFill(['last_heartbeat_at' => now(), 'last_error' => 'Attendance sync failed.'])->save();
             throw $e;
         }
+    }
+
+    private function devicesForCredential(AttendanceSyncAgent $credential)
+    {
+        return AttendanceSyncAgent::query()
+            ->where('is_active', true)
+            ->when(
+                $credential->local_agent_key,
+                fn ($q) => $q->where('local_agent_key', $credential->local_agent_key),
+                fn ($q) => $q->whereKey($credential->id)
+            );
+    }
+
+    private function resolveDevice(AttendanceSyncAgent $credential, string $identifier): ?AttendanceSyncAgent
+    {
+        return $this->devicesForCredential($credential)->where('device_identifier', $identifier)->first();
     }
 }
