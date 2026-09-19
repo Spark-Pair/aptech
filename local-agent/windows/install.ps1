@@ -18,13 +18,14 @@ if (-not (Test-Path $vendor)) { throw "This package is missing its bundled Compo
 
 $apiBase = (Read-Host "Hosted HR Portal URL (example: https://company.example.com)").TrimEnd("/")
 if ($apiBase -notmatch '^https://') { throw "The hosted portal URL must use HTTPS." }
-$token = (Read-Host "One-time Local Agent provisioning token").Trim()
-if ([string]::IsNullOrWhiteSpace($token)) { throw "Provisioning token is required." }
+$token = (Read-Host "Local Agent access token").Trim()
+if ([string]::IsNullOrWhiteSpace($token)) { throw "Local Agent access token is required." }
 
 $installDir = Join-Path $env:ProgramData "AptechAttendanceAgent"
 New-Item -ItemType Directory -Force -Path $installDir | Out-Null
 
-$preserve = @("state.sqlite", "config.json", "logs")
+$existingConfig = Join-Path $installDir "config.json"
+$hasExistingConfig = Test-Path $existingConfig
 Get-ChildItem $source -Force | Where-Object { $_.Name -notin @("windows", "config.json", "state.sqlite", "logs") } | ForEach-Object {
     Copy-Item $_.FullName -Destination $installDir -Recurse -Force
 }
@@ -44,7 +45,11 @@ $config = @{
     retry_base_seconds = 30
     retry_max_seconds = 1800
 }
-$config | ConvertTo-Json | Set-Content -Path (Join-Path $installDir "config.json") -Encoding UTF8
+if (-not $hasExistingConfig) {
+    $config | ConvertTo-Json | Set-Content -Path $existingConfig -Encoding UTF8
+} else {
+    Write-Host "Existing Local Agent config preserved."
+}
 
 $runner = Join-Path $installDir "run-agent.cmd"
 @"
