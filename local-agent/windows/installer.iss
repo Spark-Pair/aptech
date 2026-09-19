@@ -33,10 +33,13 @@ var
 procedure VerifyAgentInstallation;
 var
   ResultCode: Integer;
+  PowerShellExe: String;
+  VerifyCommand: String;
 begin
-  if not Exec(ExpandConstant('{sys}\\WindowsPowerShell\\v1.0\\powershell.exe'),
-    '-NoProfile -ExecutionPolicy Bypass -Command "if (-not (Get-ScheduledTask -TaskName \'Aptech Attendance Sync Agent\' -ErrorAction SilentlyContinue)) { exit 41 }; exit 0"',
-    '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+  PowerShellExe := ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe');
+  VerifyCommand := '-NoProfile -ExecutionPolicy Bypass -Command "if (Get-ScheduledTask -TaskName ''Aptech Attendance Sync Agent'' -ErrorAction SilentlyContinue) { exit 0 } else { exit 41 }"';
+
+  if not Exec(PowerShellExe, VerifyCommand, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     RaiseException('Unable to verify the Local Agent Scheduled Task.');
 
   if ResultCode <> 0 then
