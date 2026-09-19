@@ -23,7 +23,7 @@ Uninstallable=no
 Source: "..\..\dist\local-agent\*"; DestDir: "{tmp}\AptechAttendanceAgent"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{tmp}\AptechAttendanceAgent\windows\install.ps1"" -ApiBaseUrl ""{code:GetPortalUrl}"" -AccessToken ""{code:GetAccessToken}"""; Flags: runhidden waituntilterminated
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{tmp}\AptechAttendanceAgent\windows\install.ps1"" -ApiBaseUrl ""{code:GetPortalUrl}"" -AccessToken ""{code:GetAccessToken}"""; Flags: waituntilterminated
 
 [Code]
 var
@@ -65,6 +65,13 @@ begin
       Result := False;
     end;
   end;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  Result := '';
+  if Trim(TokenPage.Values[0]) = '' then
+    Result := 'Local Agent access token is required.';
 end;
 
 function GetPortalUrl(Param: String): String;
