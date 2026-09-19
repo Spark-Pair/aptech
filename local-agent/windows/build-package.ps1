@@ -54,8 +54,8 @@ $isccCandidates = @(
     "$env:ProgramFiles\\Inno Setup 6\\ISCC.exe"
 ) | Where-Object { $_ -and (Test-Path $_) }
 
-if ($isccCandidates.Count -gt 0) {
-    $iscc = $isccCandidates[0]
+$iscc = @($isccCandidates) | Select-Object -First 1
+if ($iscc) {
     $iss = Join-Path $PSScriptRoot "installer.iss"
     & $iscc $iss
     if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed to build the Windows installer." }
