@@ -23,12 +23,25 @@ Uninstallable=no
 Source: "..\..\dist\local-agent\*"; DestDir: "{tmp}\AptechAttendanceAgent"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{tmp}\AptechAttendanceAgent\windows\install.ps1"" -ApiBaseUrl ""{code:GetPortalUrl}"" -AccessToken ""{code:GetAccessToken}"""; Flags: waituntilterminated
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{tmp}\AptechAttendanceAgent\windows\install.ps1"" -ApiBaseUrl ""{code:GetPortalUrl}"" -AccessToken ""{code:GetAccessToken}"""; Flags: waituntilterminated; StatusMsg: "Installing and starting Attendance Local Agent..."; AfterInstall: VerifyAgentInstallation
 
 [Code]
 var
   PortalPage: TInputQueryWizardPage;
   TokenPage: TInputQueryWizardPage;
+
+procedure VerifyAgentInstallation;
+var
+  ResultCode: Integer;
+begin
+  if not Exec(ExpandConstant('{sys}\\WindowsPowerShell\\v1.0\\powershell.exe'),
+    '-NoProfile -ExecutionPolicy Bypass -Command "if (-not (Get-ScheduledTask -TaskName \'Aptech Attendance Sync Agent\' -ErrorAction SilentlyContinue)) { exit 41 }; exit 0"',
+    '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    RaiseException('Unable to verify the Local Agent Scheduled Task.');
+
+  if ResultCode <> 0 then
+    RaiseException('Local Agent installation failed: the Scheduled Task was not created. Setup will not report success.');
+end;
 
 procedure InitializeWizard;
 begin
