@@ -39,24 +39,28 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Production diagnosis confirmed `zk-office-1` is `agent-1` while never-connected `2222` is `agent-2`.
 - [x] Removed implicit "most recently active" Local Agent assignment. Device create/update now uses explicit web-selected `local_agent_key`; existing assignment is selected in UI.
 - [x] Branch/device/credential forms use normal full-page submission (`data-no-ajax`) to avoid global AJAX interception issues.
-- [ ] Deploy explicit Local Agent assignment UI/controller commits after `5d6da1b` to Hostinger.
-- [ ] In Branches & Devices, explicitly assign `.7` / `2222` to the same Local Agent as `.15` / `zk-office-1`.
+- [x] Explicit Local Agent assignment UI/controller commits through `e31016d` deployed to Hostinger and browser-visible.
+- [ ] Deploy/run migration `2026_09_16_160000_allow_shared_local_agent_token_hash.php` (commit `3d95d74`) if not already migrated; this removes the legacy unique token constraint required for multiple devices sharing one Local Agent credential.
+- [ ] In Branches & Devices, explicitly assign `.7` / `2222` to the same Local Agent as `.15` / `zk-office-1` after the shared-token migration is confirmed.
 - [ ] Run Windows `php agent.php --once` and verify heartbeat returns both `.7:4370` and `.15:4370`, both user rosters sync, and both devices get independent last-contact timestamps.
 - [ ] Run `php agent.php --run`, make fresh punches on both physical devices, manually refresh the web app, and verify correct branch/device attendance.
 - [ ] Put the updated multi-device Local Agent on the Zorin demo machine when switching back to Zorin.
-- [ ] Run automated regression after the multi-device changes on SQLite and isolated Hostinger MariaDB.
+- [ ] Run automated regression after the latest multi-device/standalone-agent changes on SQLite and isolated Hostinger MariaDB.
 
 ## Current known issues / pending verification
 - [x] Empty device-user snapshots are valid server input (`af9edee`); production now includes this change.
 - [x] Production code/migration through `5d6da1b` deployed and optimized on 2026-09-16.
-- [ ] Explicit Local Agent assignment UI/controller commits after `5d6da1b` still need production deployment/browser test.
+- [x] Explicit Local Agent assignment UI is deployed/browser-visible; first assignment attempt exposed the legacy unique `token_hash` DB constraint and the migration fix is committed.
+- [x] Retry acknowledgement checkpoint now uses the queued batch's `device_identifier`, preventing multi-device replay from updating the wrong device checkpoint.
 - [ ] Fresh attendance punches previously received a server HTTP 422 after the timezone fix; inspect the exact dead-letter payload before changing future-time tolerance.
 - [ ] Old missing attendance remains unresolved; compare local acknowledged/dead-letter state with production before any replay/reset.
 - [x] Known truly future-dated uid50/51 rows are intentionally skipped locally.
 - [ ] Latest shifts/leaves/attendance/operations modal UI refactor is deployed with the `5d6da1b` pull but still needs browser verification.
 - [ ] Add/complete automated CRUD + authorization + multi-device heartbeat tests.
 - [ ] Verify separate Local Agents for separate physical networks before general multi-site rollout.
-- [ ] Build/refine non-technical one-click installer + one-time provisioning flow.
+- [x] Added self-contained Windows packaging/install/uninstall flow: bundled PHP runtime + dependencies, `%ProgramData%` install, startup Scheduled Task, and preservation of local replay state on uninstall.
+- [x] New Local Agent installs only require HTTPS portal URL + provisioning token locally; device IP/port/branch/assignment remain server-managed.
+- [ ] Build the distributable package with a verified Windows PHP runtime and browser/client-test the installer on a clean Windows PC.
 - [ ] Preferred production document-root isolation review remains.
 
 ## Safety
@@ -79,3 +83,16 @@ Company
            +-> device B users/punches -> HTTPS -> device B / branch B
            +-> one device offline does not stop the others
 ```
+
+
+## Finalization work — 2026-09-19
+- [x] Local Agent boot supports standalone `local-agent/vendor/autoload.php` with parent-project fallback for development.
+- [x] Local Agent no longer requires a locally hardcoded bootstrap device identifier/IP/port; heartbeat assignment is authoritative after provisioning.
+- [x] Added Windows one-click install/uninstall scripts and self-contained package builder.
+- [x] Windows installer registers `Aptech Attendance Sync Agent` at system startup and starts it immediately.
+- [x] Installer/uninstaller never automatically deletes `state.sqlite` or replay history.
+- [ ] Confirm shared-token migration on Hostinger, assign both physical devices to one agent, and verify `Devices=2, connected=2`.
+- [ ] Fresh punch on each physical device and verify correct device/branch attendance after manual web refresh.
+- [ ] Inspect/reconcile any existing dead-letter/future timestamp and old missing attendance before declaring historical sync complete.
+- [ ] Build/test self-contained Windows ZIP on a clean client PC; then replace manual development startup with installed background task.
+- [ ] Final regression + production smoke test. Only after explicit user approval may `web-hosting-sync` be merged to main/master.
