@@ -24,6 +24,13 @@ foreach ($extension in $requiredExtensions) {
     }
 }
 
+$autoload = Join-Path $vendorSource "autoload.php"
+$autoloadPhp = $autoload.Replace("\\", "/").Replace("'", "\\'")
+$zkCheck = & $php -r "require '$autoloadPhp'; exit(class_exists('Rats\\Zkteco\\Lib\\ZKTeco') ? 0 : 1);"
+if ($LASTEXITCODE -ne 0) {
+    throw "Composer dependencies do not contain Rats\\Zkteco\\Lib\\ZKTeco. Run composer install before packaging."
+}
+
 $out = Join-Path $repoRoot $OutputDir
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $out | Out-Null
