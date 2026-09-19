@@ -218,6 +218,61 @@ class LocalAgentTest extends TestCase
         $this->assertSame(5, $this->runner(['poll_interval_seconds' => 5])->pollInterval());
     }
 
+    public function test_runner_works_without_locally_hardcoded_device_configuration(): void
+    {
+        $api = new FakeApiClient(heartbeatDevices: [[
+            'device_identifier' => 'server-device',
+            'device_ip' => '127.0.0.1',
+            'device_port' => 4370,
+            'device_timezone' => 'Asia/Karachi',
+        ]]);
+        $runner = $this->runner(['device_identifier' => null], api: $api, reader: new FakeZKTecoReader(attendance: [
+            ['uid' => 1, 'id' => 1, 'state' => 1, 'timestamp' => date('Y-m-d H:i:s', time() - 60), 'type' => 0],
+        ]));
+
+        $this->assertSame(1, $runner->runOnce());
+        $this->assertSame('server-device', $api->syncPayloads[0]['device_identifier']);
+    }
+
+    public function test_runner_processes_two_server_assigned_devices_independently(): void
+    {
+        $api = new FakeApiClient(heartbeatDevices: [
+            ['device_identifier' => 'device-a', 'device_ip' => '127.0.0.1', 'device_port' => 4370, 'device_timezone' => 'Asia/Karachi'],
+            ['device_identifier' => 'device-b', 'device_ip' => '127.0.0.2', 'device_port' => 4370, 'device_timezone' => 'Asia/Karachi'],
+        ]);
+        $runner = $this->runner(api: $api, reader: new FakeZKTecoReader(attendance: [
+            ['uid' => 1, 'id' => 1, 'state' => 1, 'timestamp' => date('Y-m-d H:i:s', time() - 60), 'type' => 0],
+        ]));
+
+        $this->assertSame(2, $runner->runOnce());
+        $this->assertSame(['device-a', 'device-b'], array_column($api->syncPayloads, 'device_identifier'));
+    }
+
+    public function test_server_managed_device_timezone_is_used_per_device(): void
+    {
+        date_default_timezone_set('UTC');
+        $api = new FakeApiClient(heartbeatDevices: [[
+            'device_identifier' => 'karachi-device',
+            'device_ip' => '127.0.0.1',
+            'device_port' => 4370,
+            'device_timezone' => 'Asia/Karachi',
+        ]]);
+        $log = new Logger($this->tempDir);
+        $runner = new AgentRunner(
+            ['batch_size' => 500],
+            $this->state(),
+            $api,
+            new FakeZKTecoReader(attendance: [['uid' => 1, 'id' => 1, 'state' => 1, 'timestamp' => '2026-09-19 13:00:00', 'type' => 0]]),
+            $log,
+            new AttendanceLogNormalizer($log, 300, new DateTimeZone('UTC'), new DateTimeImmutable('2026-09-19T08:02:00+00:00')),
+            new DeviceUserNormalizer($log),
+            new DeviceAttendanceIdentity(),
+            fn (int $seconds) => null,
+        );
+
+        $this->assertSame(1, $runner->runOnce());
+    }
+
     public function test_runner_sends_only_new_rows_from_duplicate_history(): void
     {
         $api = new FakeApiClient();
@@ -394,12 +449,20 @@ class FakeApiClient extends ApiClient
     public array $syncPayloads = [];
     public array $userPayloads = [];
 
-    public function __construct(private ?ApiException $syncException = null)
+    public function __construct(private ?ApiException $syncException = null, private ?array $heartbeatDevices = null)
     {
         parent::__construct(['api_base_url' => 'https://example.test', 'api_token' => str_repeat('x', 32)]);
     }
 
-    public function heartbeat(): void {}
+    public function heartbeat(): array
+    {
+        return ['devices' => $this->heartbeatDevices ?? [[
+            'device_identifier' => 'zk-office-1',
+            'device_ip' => '127.0.0.1',
+            'device_port' => 4370,
+            'device_timezone' => 'Asia/Karachi',
+        ]]];
+    }
 
     public function sync(array $payload): array
     {
