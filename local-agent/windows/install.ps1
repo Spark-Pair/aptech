@@ -50,10 +50,12 @@ $config = @{
     retry_base_seconds = 30
     retry_max_seconds = 1800
 }
-if (-not $hasExistingConfig) {
-    $config | ConvertTo-Json | Set-Content -Path $existingConfig -Encoding UTF8
-} else {
-    Write-Host "Existing Local Agent config preserved."
+# Always write the credentials supplied to this installer. Device/branch settings
+# remain server-managed; only local runtime settings and the access credential live here.
+$configJson = $config | ConvertTo-Json
+[System.IO.File]::WriteAllText($existingConfig, $configJson, (New-Object System.Text.UTF8Encoding($false)))
+if ($hasExistingConfig) {
+    Write-Host "Existing Local Agent config refreshed with the installer credentials."
 }
 
 $runner = Join-Path $installDir "run-agent.cmd"
