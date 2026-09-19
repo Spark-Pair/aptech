@@ -17,6 +17,20 @@ class AttendanceAgentApiTest extends TestCase {
  public function test_heartbeat_requires_bearer_token():void{$this->postJson('/api/v1/attendance-agent/heartbeat')->assertUnauthorized();}
  public function test_active_agent_can_send_heartbeat():void{$a=$this->agent();$this->withToken($this->token)->postJson('/api/v1/attendance-agent/heartbeat')->assertOk()->assertJson(['message'=>'Heartbeat accepted.','branch_id'=>$a->branch_id]);}
  public function test_inactive_agent_is_rejected():void{$a=$this->agent();$a->update(['is_active'=>false]);$this->withToken($this->token)->postJson('/api/v1/attendance-agent/heartbeat')->assertUnauthorized();}
+ public function test_shared_local_agent_token_returns_all_assigned_devices():void{
+  $branchA=$this->branch('branch-a'); $branchB=$this->branch('branch-b'); $hash=hash('sha256',$this->token);
+  AttendanceSyncAgent::create(['branch_id'=>$branchA->id,'name'=>'Device A','device_identifier'=>'device-a','local_agent_key'=>'shared-agent','token_hash'=>$hash,'is_active'=>true]);
+  AttendanceSyncAgent::create(['branch_id'=>$branchB->id,'name'=>'Device B','device_identifier'=>'device-b','local_agent_key'=>'shared-agent','token_hash'=>$hash,'is_active'=>true]);
+  $response=$this->withToken($this->token)->postJson('/api/v1/attendance-agent/heartbeat')->assertOk()->assertJson(['local_agent_key'=>'shared-agent']);
+  $this->assertSame(['device-a','device-b'],collect($response->json('devices'))->pluck('device_identifier')->sort()->values()->all());
+ }
+ public function test_shared_local_agent_cannot_submit_for_device_outside_group():void{
+  $branch=$this->branch('branch-a'); $hash=hash('sha256',$this->token);
+  AttendanceSyncAgent::create(['branch_id'=>$branch->id,'name'=>'Device A','device_identifier'=>'device-a','local_agent_key'=>'shared-agent','token_hash'=>$hash,'is_active'=>true]);
+  $otherToken='other-token-that-is-long-enough-1234567890';
+  AttendanceSyncAgent::create(['branch_id'=>$branch->id,'name'=>'Device B','device_identifier'=>'device-b','local_agent_key'=>'other-agent','token_hash'=>hash('sha256',$otherToken),'is_active'=>true]);
+  $this->withToken($this->token)->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'device-b','users'=>[]])->assertForbidden();
+ }
  public function test_sync_rejects_wrong_device_identifier():void{$this->agent();$this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'batch-1','device_identifier'=>'wrong','logs'=>[['id'=>1,'timestamp'=>'2026-09-10 09:00:00','type'=>0]]])->assertForbidden();}
  public function test_sync_validates_bounded_logs():void{$this->agent();$this->withToken($this->token)->postJson('/api/v1/attendance-agent/sync',['batch_id'=>'batch-1','device_identifier'=>'zk-office-1','logs'=>[]])->assertUnprocessable()->assertJsonValidationErrors(['logs']);}
  public function test_user_sync_requires_bearer_token():void{$this->postJson('/api/v1/attendance-agent/users',['device_identifier'=>'zk-office-1','users'=>[]])->assertUnauthorized();}
