@@ -67,10 +67,33 @@ cd /d "$installDir"
 "$installDir\runtime\php.exe" "$installDir\agent.php" --run
 "@ | Set-Content -Path $runner -Encoding ASCII
 
-$taskName = "Aptech Attendance Sync Agent"
-schtasks.exe /Delete /TN $taskName /F 2>$null | Out-Null
-schtasks.exe /Create /TN $taskName /SC ONSTART /RU SYSTEM /RL HIGHEST /TR ('"' + $runner + '"') /F | Out-Null
-schtasks.exe /Run /TN $taskName | Out-Null
+# Register the background agent through the Windows ScheduledTasks API so failures
+# are terminating errors instead of being silently ignored by schtasks.exe.
+$existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+if ($existingTask) {
+    Stop-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction Stop
+}
+
+$action = New-ScheduledTaskAction -Execute $runtime -Argument ('"' + (Join-Path $installDir "agent.php") + '" --run') -WorkingDirectory $installDir
+$trigger = New-ScheduledTaskTrigger -AtStartup
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
+
+Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force -ErrorAction Stop | Out-Null
+
+$registeredTask = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
+if (-not $registeredTask) {
+    throw "Failed to register the Local Agent Scheduled Task."
+}
+
+Start-ScheduledTask -TaskName $taskName -ErrorAction Stop
+Start-Sleep -Seconds 2
+
+$startedTask = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
+if ($startedTask.State -notin @("Running", "Ready")) {
+    throw "Local Agent Scheduled Task was registered but did not start correctly. State: $($startedTask.State)"
+}
 
 Write-Host ""
 Write-Host "Local Agent installed and started successfully."
