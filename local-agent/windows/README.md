@@ -9,7 +9,7 @@ The client package is self-contained. A client PC does not need Git, Composer, N
 - `runtime/php.exe` with cURL, OpenSSL, PDO SQLite, SQLite3 and sockets enabled
 - `windows/install.cmd` and `windows/install.ps1`
 
-Run `windows/install.cmd` as Administrator. The installer asks only for the HTTPS portal URL and one-time Local Agent provisioning token. Device IP, port, branch, timeout and Local Agent assignment remain server-managed.
+Run `windows/install.cmd` as Administrator. The installer asks only for the HTTPS portal URL and Local Agent access token. Device IP, port, branch, timeout and Local Agent assignment remain server-managed.
 
 The installer copies the package to `%ProgramData%\AptechAttendanceAgent`, creates the `Aptech Attendance Sync Agent` startup task, and starts it.
 
