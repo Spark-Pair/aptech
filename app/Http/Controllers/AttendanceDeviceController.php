@@ -6,7 +6,9 @@ use App\Models\AttendanceSyncAgent;
 use App\Models\Branch;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -23,6 +25,16 @@ class AttendanceDeviceController extends Controller
             ->values();
 
         return view('attendance-devices.index', compact('branches', 'localAgents'));
+    }
+
+    public function downloadAgent(): BinaryFileResponse
+    {
+        $path = storage_path('app/local-agent/AptechAttendanceAgentSetup.exe');
+        abort_unless(is_file($path), 404, 'Windows Local Agent installer is not available yet.');
+
+        return response()->download($path, 'AptechAttendanceAgentSetup.exe', [
+            'Content-Type' => 'application/vnd.microsoft.portable-executable',
+        ]);
     }
 
     public function storeBranch(Request $request): RedirectResponse
