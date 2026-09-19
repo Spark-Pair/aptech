@@ -47,8 +47,10 @@ class AgentRunner
         $known = $this->state->knownFingerprints($fingerprints);
         $newRows = array_values(array_filter($rawRows, fn ($row) => ! isset($known[$this->fingerprint($identifier, $row)])));
         $records = [];
+        $timezone = (string)($device['device_timezone'] ?? $this->config['device_timezone'] ?? 'Asia/Karachi');
+        $normalizer = $this->attendanceNormalizer->withTimezone($timezone);
         foreach ($newRows as $row) {
-            $normalized = $this->attendanceNormalizer->normalize([$row], null);
+            $normalized = $normalizer->normalize([$row], null);
             if ($normalized !== []) $records[] = ['log' => $normalized[0], 'fingerprint' => $this->fingerprint($identifier, $row)];
         }
         usort($records, fn ($a, $b) => strcmp($a['log']['timestamp'], $b['log']['timestamp']));
