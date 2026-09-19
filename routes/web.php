@@ -19,6 +19,7 @@ Route::middleware('auth')->group(function(){
     Route::get('attendances',[AttendanceController::class,'index'])->name('attendances.index'); Route::put('attendances/{attendance}',[AttendanceController::class,'update'])->name('attendances.update'); Route::post('fetchLogs',[AttendanceController::class,'fetchLogs'])->middleware('throttle:2,1')->name('attendance.sync'); Route::get('fetchLogs',fn()=>redirect()->route('operations.index'));
     Route::get('attendance-agent/status',AttendanceAgentStatusController::class)->middleware('throttle:120,1')->name('attendance-agent.status');
     Route::get('attendance-devices',[AttendanceDeviceController::class,'index'])->name('attendance-devices.index');
+    Route::get('attendance-devices/local-agent/download',[AttendanceDeviceController::class,'downloadAgent'])->name('attendance-devices.local-agent.download');
     Route::post('attendance-devices/branches',[AttendanceDeviceController::class,'storeBranch'])->name('attendance-devices.branches.store');
     Route::put('attendance-devices/branches/{branch}',[AttendanceDeviceController::class,'updateBranch'])->name('attendance-devices.branches.update');
     Route::post('attendance-devices/devices',[AttendanceDeviceController::class,'storeDevice'])->name('attendance-devices.devices.store');
