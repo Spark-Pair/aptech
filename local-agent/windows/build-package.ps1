@@ -50,7 +50,7 @@ Write-Host "Self-contained Local Agent package created:"
 Write-Host $zip
 
 $isccCandidates = @(
-    "$env:ProgramFiles(x86)\\Inno Setup 6\\ISCC.exe",
+    "${env:ProgramFiles(x86)}\\Inno Setup 6\\ISCC.exe",
     "$env:ProgramFiles\\Inno Setup 6\\ISCC.exe"
 ) | Where-Object { $_ -and (Test-Path $_) }
 
