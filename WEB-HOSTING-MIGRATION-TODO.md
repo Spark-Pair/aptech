@@ -40,10 +40,10 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Removed implicit "most recently active" Local Agent assignment. Device create/update now uses explicit web-selected `local_agent_key`; existing assignment is selected in UI.
 - [x] Branch/device/credential forms use normal full-page submission (`data-no-ajax`) to avoid global AJAX interception issues.
 - [x] Explicit Local Agent assignment UI/controller commits through `e31016d` deployed to Hostinger and browser-visible.
-- [ ] Deploy/run migration `2026_09_16_160000_allow_shared_local_agent_token_hash.php` (commit `3d95d74`) if not already migrated; this removes the legacy unique token constraint required for multiple devices sharing one Local Agent credential.
-- [ ] In Branches & Devices, explicitly assign `.7` / `2222` to the same Local Agent as `.15` / `zk-office-1` after the shared-token migration is confirmed.
-- [ ] Run Windows `php agent.php --once` and verify heartbeat returns both `.7:4370` and `.15:4370`, both user rosters sync, and both devices get independent last-contact timestamps.
-- [ ] Run `php agent.php --run`, make fresh punches on both physical devices, manually refresh the web app, and verify correct branch/device attendance.
+- [x] Shared-token migration `2026_09_16_160000_allow_shared_local_agent_token_hash.php` is confirmed applied on Hostinger; production reported nothing pending after deployment through `99d34ad`.
+- [x] Production heartbeat now returns both assigned devices to the same Local Agent; physical test showed `Devices=2`.
+- [x] Windows background agent verified heartbeat with two assigned devices and fault isolation: unavailable `2222` did not block `zk-office-1`; observed `Devices=2, connected=1`.
+- [ ] Fresh punch on available `zk-office-1` verified end-to-end: device rows increased 33→34, `new rows=1`, pending=0, and attendance appeared after manual web refresh. Second physical device remains unavailable for a two-online-device test.
 - [ ] Put the updated multi-device Local Agent on the Zorin demo machine when switching back to Zorin.
 - [ ] Run automated regression after the latest multi-device/standalone-agent changes on SQLite and isolated Hostinger MariaDB.
 
@@ -52,14 +52,14 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Production code/migration through `5d6da1b` deployed and optimized on 2026-09-16.
 - [x] Explicit Local Agent assignment UI is deployed/browser-visible; first assignment attempt exposed the legacy unique `token_hash` DB constraint and the migration fix is committed.
 - [x] Retry acknowledgement checkpoint now uses the queued batch's `device_identifier`, preventing multi-device replay from updating the wrong device checkpoint.
-- [ ] Fresh attendance punches previously received a server HTTP 422 after the timezone fix; inspect the exact dead-letter payload before changing future-time tolerance.
+- [x] Fresh live attendance no longer reproduces the previous HTTP 422: 2026-09-19 physical punch synced successfully with pending=0. Existing historical dead-letter entries still require read-only inspection/reconciliation.
 - [ ] Old missing attendance remains unresolved; compare local acknowledged/dead-letter state with production before any replay/reset.
 - [x] Known truly future-dated uid50/51 rows are intentionally skipped locally.
 - [ ] Latest shifts/leaves/attendance/operations modal UI refactor is deployed with the `5d6da1b` pull but still needs browser verification.
 - [ ] Add/complete automated CRUD + authorization + multi-device heartbeat tests.
 - [ ] Verify separate Local Agents for separate physical networks before general multi-site rollout.
 - [x] Added self-contained Windows packaging/install/uninstall flow: bundled PHP runtime + dependencies, `%ProgramData%` install, startup Scheduled Task, and preservation of local replay state on uninstall.
-- [x] New Local Agent installs only require HTTPS portal URL + provisioning token locally; device IP/port/branch/assignment remain server-managed.
+- [x] New Local Agent installs require only HTTPS portal URL + Local Agent access token locally; device IP/port/branch/assignment remain server-managed.
 - [ ] Build the distributable package with a verified Windows PHP runtime and browser/client-test the installer on a clean Windows PC.
 - [ ] Preferred production document-root isolation review remains.
 
@@ -91,8 +91,11 @@ Company
 - [x] Added Windows one-click install/uninstall scripts and self-contained package builder.
 - [x] Windows installer registers `Aptech Attendance Sync Agent` at system startup and starts it immediately.
 - [x] Installer/uninstaller never automatically deletes `state.sqlite` or replay history.
-- [ ] Confirm shared-token migration on Hostinger, assign both physical devices to one agent, and verify `Devices=2, connected=2`.
-- [ ] Fresh punch on each physical device and verify correct device/branch attendance after manual web refresh.
+- [x] Shared-token migration and same-agent assignment confirmed on Hostinger; heartbeat returns `Devices=2`. Only one physical device was available, so observed `connected=1` is expected; `connected=2` remains a later hardware-availability check.
+- [ ] Fresh punch on `zk-office-1` verified end-to-end and appeared in web attendance after refresh. Repeat on `2222` when that physical device is available.
 - [ ] Inspect/reconcile any existing dead-letter/future timestamp and old missing attendance before declaring historical sync complete.
-- [ ] Build/test self-contained Windows ZIP on a clean client PC; then replace manual development startup with installed background task.
+- [ ] Build/test self-contained Windows ZIP on a clean client PC. Builder now verifies required PHP extensions and `Rats\\Zkteco\\Lib\\ZKTeco`; reinstall preserves existing config/state. Current development Scheduled Task is already running successfully.
 - [ ] Final regression + production smoke test. Only after explicit user approval may `web-hosting-sync` be merged to main/master.
+
+- [x] 2026-09-19 physical live-sync verification: background Scheduled Task running as a single PHP process; server returned two assigned devices; one available device connected; fresh punch synced and appeared in production web UI.
+- [x] Per-device server-managed timezone is now applied during Local Agent normalization; automated coverage added for provisioning-only config, two assigned devices, timezone handling, shared-token heartbeat and group authorization.
