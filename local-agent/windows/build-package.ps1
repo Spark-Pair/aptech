@@ -48,3 +48,19 @@ Compress-Archive -Path (Join-Path $out "*") -DestinationPath $zip -CompressionLe
 
 Write-Host "Self-contained Local Agent package created:"
 Write-Host $zip
+
+$isccCandidates = @(
+    "$env:ProgramFiles(x86)\\Inno Setup 6\\ISCC.exe",
+    "$env:ProgramFiles\\Inno Setup 6\\ISCC.exe"
+) | Where-Object { $_ -and (Test-Path $_) }
+
+if ($isccCandidates.Count -gt 0) {
+    $iscc = $isccCandidates[0]
+    $iss = Join-Path $PSScriptRoot "installer.iss"
+    & $iscc $iss
+    if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed to build the Windows installer." }
+    Write-Host "Windows EXE installer created:"
+    Write-Host (Join-Path $repoRoot "dist\\AptechAttendanceAgentSetup.exe")
+} else {
+    Write-Warning "Inno Setup 6 was not found. ZIP was created, but EXE was not compiled. Install Inno Setup 6 and run this builder again."
+}
