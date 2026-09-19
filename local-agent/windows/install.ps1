@@ -1,3 +1,8 @@
+param(
+    [string]$ApiBaseUrl,
+    [string]$AccessToken
+)
+
 $ErrorActionPreference = "Stop"
 
 function Require-Admin {
@@ -16,9 +21,9 @@ $vendor = Join-Path $source "vendor\autoload.php"
 if (-not (Test-Path $runtime)) { throw "This package is missing its bundled PHP runtime." }
 if (-not (Test-Path $vendor)) { throw "This package is missing its bundled Composer dependencies." }
 
-$apiBase = (Read-Host "Hosted HR Portal URL (example: https://company.example.com)").TrimEnd("/")
+$apiBase = if ([string]::IsNullOrWhiteSpace($ApiBaseUrl)) { (Read-Host "Hosted HR Portal URL (example: https://company.example.com)").TrimEnd("/") } else { $ApiBaseUrl.TrimEnd("/") }
 if ($apiBase -notmatch '^https://') { throw "The hosted portal URL must use HTTPS." }
-$token = (Read-Host "Local Agent access token").Trim()
+$token = if ([string]::IsNullOrWhiteSpace($AccessToken)) { (Read-Host "Local Agent access token").Trim() } else { $AccessToken.Trim() }
 if ([string]::IsNullOrWhiteSpace($token)) { throw "Local Agent access token is required." }
 
 $installDir = Join-Path $env:ProgramData "AptechAttendanceAgent"
