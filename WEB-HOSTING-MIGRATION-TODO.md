@@ -100,3 +100,11 @@ Company
 
 - [x] 2026-09-19 physical live-sync verification: background Scheduled Task running as a single PHP process; server returned two assigned devices; one available device connected; fresh punch synced and appeared in production web UI.
 - [x] Per-device server-managed timezone is now applied during Local Agent normalization; automated coverage added for provisioning-only config, two assigned devices, timezone handling, shared-token heartbeat and group authorization.
+
+
+## Fresh-install installer verification — 2026-09-19
+- [x] Fresh Windows install confirmed portal URL and 64-character API token are written to `config.json`.
+- [x] Manual `agent.php --once` reaches the assigned ZKTeco device, confirming provisioning/auth/device access works; vendor PHP deprecation notices remain non-fatal.
+- [x] Fixed fresh-install regression where the EXE copied files/config but failed to leave the `Aptech Attendance Sync Agent` Scheduled Task registered.
+- [x] Installer now registers the startup task through PowerShell ScheduledTasks APIs, verifies registration, starts it immediately, and fails visibly if provisioning/task setup fails.
+- [ ] Rebuild `AptechAttendanceAgentSetup.exe` from the latest branch and verify a clean install shows the task Running and creates fresh agent logs.
