@@ -43,17 +43,18 @@ Documentation index: `docs/README-WEB-HOSTING-MIGRATION.md`.
 - [x] Shared-token migration `2026_09_16_160000_allow_shared_local_agent_token_hash.php` is confirmed applied on Hostinger; production reported nothing pending after deployment through `99d34ad`.
 - [x] Production heartbeat now returns both assigned devices to the same Local Agent; physical test showed `Devices=2`.
 - [x] Windows background agent verified heartbeat with two assigned devices and fault isolation: unavailable `2222` did not block `zk-office-1`; observed `Devices=2, connected=1`.
-- [ ] Fresh punch on available `zk-office-1` verified end-to-end: device rows increased 33→34, `new rows=1`, pending=0, and attendance appeared after manual web refresh. Second physical device remains unavailable for a two-online-device test.
+- [x] Fresh punch on available `zk-office-1` verified end-to-end: device rows increased 33→34, `new rows=1`, pending=0, and attendance appeared after manual web refresh. Second physical device remains unavailable for a two-online-device test.
 - [ ] Put the updated multi-device Local Agent on the Zorin demo machine when switching back to Zorin.
-- [ ] Run automated regression after the latest multi-device/standalone-agent changes on SQLite and isolated Hostinger MariaDB.
+- [x] Windows SQLite regression after latest multi-device/standalone-agent changes: 63 tests / 248 assertions / 0 failures.
+- [ ] Re-run isolated Hostinger MariaDB regression after the latest multi-device/standalone-agent changes.
 
 ## Current known issues / pending verification
 - [x] Empty device-user snapshots are valid server input (`af9edee`); production now includes this change.
 - [x] Production code/migration through `5d6da1b` deployed and optimized on 2026-09-16.
 - [x] Explicit Local Agent assignment UI is deployed/browser-visible; first assignment attempt exposed the legacy unique `token_hash` DB constraint and the migration fix is committed.
 - [x] Retry acknowledgement checkpoint now uses the queued batch's `device_identifier`, preventing multi-device replay from updating the wrong device checkpoint.
-- [x] Fresh live attendance no longer reproduces the previous HTTP 422: 2026-09-19 physical punch synced successfully with pending=0. Existing historical dead-letter entries still require read-only inspection/reconciliation.
-- [ ] Old missing attendance remains unresolved; compare local acknowledged/dead-letter state with production before any replay/reset.
+- [x] Fresh live attendance no longer reproduces the previous HTTP 422: 2026-09-19 physical punch synced successfully with pending=0.
+- [x] Historical dead-letter inspection completed: three 2026-09-15 `zk-office-1` type=1 punches (17:41:49, 17:44:20, 17:54:51) were old HTTP 422 entries. Production already held a later checkout at 21:41:07 Asia/Karachi; importer reconciliation returned `days=0, skipped=0`, so no production attendance change or replay/reset was required. Dead-letter rows are retained as audit history.
 - [x] Known truly future-dated uid50/51 rows are intentionally skipped locally.
 - [ ] Latest shifts/leaves/attendance/operations modal UI refactor is deployed with the `5d6da1b` pull but still needs browser verification.
 - [ ] Add/complete automated CRUD + authorization + multi-device heartbeat tests.
@@ -92,10 +93,10 @@ Company
 - [x] Windows installer registers `Aptech Attendance Sync Agent` at system startup and starts it immediately.
 - [x] Installer/uninstaller never automatically deletes `state.sqlite` or replay history.
 - [x] Shared-token migration and same-agent assignment confirmed on Hostinger; heartbeat returns `Devices=2`. Only one physical device was available, so observed `connected=1` is expected; `connected=2` remains a later hardware-availability check.
-- [ ] Fresh punch on `zk-office-1` verified end-to-end and appeared in web attendance after refresh. Repeat on `2222` when that physical device is available.
-- [ ] Inspect/reconcile any existing dead-letter/future timestamp and old missing attendance before declaring historical sync complete.
+- [x] Fresh punch on `zk-office-1` verified end-to-end and appeared in web attendance after refresh. Repeat on `2222` when that physical device is available.
+- [x] Historical dead-letter/future-timestamp reconciliation completed without state reset or direct DB edits; retained old dead-letter rows for audit history.
 - [ ] Build/test self-contained Windows ZIP on a clean client PC. Builder now verifies required PHP extensions and `Rats\\Zkteco\\Lib\\ZKTeco`; reinstall preserves existing config/state. Current development Scheduled Task is already running successfully.
-- [ ] Final regression + production smoke test. Only after explicit user approval may `web-hosting-sync` be merged to main/master.
+- [ ] Final production smoke test and latest isolated Hostinger MariaDB regression. Windows suite is green at 63 tests / 248 assertions / 0 failures. Only after explicit user approval may `web-hosting-sync` be merged to main/master.
 
 - [x] 2026-09-19 physical live-sync verification: background Scheduled Task running as a single PHP process; server returned two assigned devices; one available device connected; fresh punch synced and appeared in production web UI.
 - [x] Per-device server-managed timezone is now applied during Local Agent normalization; automated coverage added for provisioning-only config, two assigned devices, timezone handling, shared-token heartbeat and group authorization.
