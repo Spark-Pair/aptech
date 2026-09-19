@@ -5,6 +5,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$taskName = "Aptech Attendance Sync Agent"
+
 function Require-Admin {
     $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($identity)
