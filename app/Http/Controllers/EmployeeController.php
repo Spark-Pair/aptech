@@ -7,6 +7,7 @@ use App\Http\Requests\ReportRequest;
 use App\Models\Employee;
 use App\Models\Shift;
 use App\Services\AttendanceReport;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class EmployeeController extends Controller
@@ -65,5 +66,17 @@ class EmployeeController extends Controller
         $selectedSummary['Late Min'] = $selectedAttendances->sum(fn($attendance)=>(int)($attendance->late_minutes ?? 0));
 
         return view('employees.index', compact('month','employees','departments','selectedEmployee','selectedAttendances','selectedSummary'));
+    }
+    public function destroy(Employee $employee)
+    {
+        DB::transaction(function () use ($employee) {
+            $employee->deviceUsers()->update(['employee_id' => null]);
+            $employee->attendance()->delete();
+            $employee->delete();
+        });
+
+        $url = route('employees.index');
+        if (request()->wantsJson()) return response()->json(['message'=>'Employee deleted.','redirect'=>$url]);
+        return redirect($url)->with('success','Employee deleted.');
     }
 }
