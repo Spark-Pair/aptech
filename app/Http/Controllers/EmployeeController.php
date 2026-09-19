@@ -70,7 +70,10 @@ class EmployeeController extends Controller
     public function destroy(Employee $employee)
     {
         DB::transaction(function () use ($employee) {
-            $employee->deviceUsers()->update(['employee_id' => null]);
+            // Device-user mappings are derived from the device roster and cannot keep
+            // a reference to a deleted employee. Remove only this employee's mappings;
+            // this does not delete anything from the physical ZKTeco device.
+            $employee->deviceUsers()->delete();
             $employee->attendance()->delete();
             $employee->delete();
         });
